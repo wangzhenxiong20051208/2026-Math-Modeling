@@ -8,16 +8,24 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
-FIGURE_DIR = Path(r"D:\数学建模国赛\04_图")
+# 仓库根目录 = 本文件的上一级（03_代码/ 的上一级）。
+# 这样 Windows（D:\数学建模国赛）和 macOS（本仓库）解析到的是同一个 04_图。
+FIGURE_DIR = Path(__file__).resolve().parents[1] / "04_图"
 
 
 def setup_plot(font_size: int = 11) -> None:
     candidates = [
+        # Windows
         "Microsoft YaHei",
         "SimHei",
         "SimSun",
+        # Linux / 跨平台
         "Noto Sans CJK SC",
         "Source Han Sans SC",
+        # macOS
+        "PingFang SC",
+        "Hiragino Sans GB",
+        "STHeiti",
         "Arial Unicode MS",
     ]
     available = {f.name for f in mpl.font_manager.fontManager.ttflist}
