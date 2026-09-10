@@ -13,6 +13,10 @@ __pycache__/
 *.fls
 *.fdb_latexmk
 
+# excel lock / temp
+~$*
+*.tmp
+
 # os
 Thumbs.db
 Desktop.ini
