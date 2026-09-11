@@ -509,6 +509,11 @@ class Simulator:
             self.price[n] if np.ndim(self.price) == 2 else self.price,
             dtype=float,
         ).copy()
+<<<<<<< Updated upstream
+=======
+        if price_d.shape != (N,):
+            raise ValueError(f"day {n} price shape {price_d.shape}, expected ({N},)")
+>>>>>>> Stashed changes
 
         if n == 0:
             ex = cold_start_day(l_act, v_act, price_d)

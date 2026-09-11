@@ -26,6 +26,11 @@ def run_backtest(price, dates, load_kw, pv_kw, fc, alpha=0.8, lam=1.0, rho=0.5, 
     for d in range(0, maxd+1):
         E0_by_day[d]=E0_cur
         price_d = price_row(price, d)
+<<<<<<< Updated upstream
+=======
+        if price_d.shape != (N,):
+            raise ValueError(f"day {d} price shape {price_d.shape}, expected ({N},)")
+>>>>>>> Stashed changes
         if d not in day_range:
             # still need to step storage? For days before range (warmup), we must simulate with same policy to get correct E0.
             # To avoid complexity, require day_range starts at 0. We'll just simulate all from 0.
