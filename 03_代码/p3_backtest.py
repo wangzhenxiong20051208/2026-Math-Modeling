@@ -8,7 +8,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from p3_microgrid import *
 
 def run_backtest(price, dates, load_kw, pv_kw, fc, alpha=0.8, lam=1.0, rho=0.5, E_tar=6000.0, W=28,
-                 use_adjust=True, adjust_mask=(True,True,True), day_range=None, verbose=False):
+                 use_adjust=True, adjust_mask=(True,True,True), day_range=None, verbose=False,
+                 bill_price=None):
+    # price = 0:00 及调整所用计划电价（可预测）；bill_price = 结算用电价（当天实际）。
+    if bill_price is None:
+        bill_price = price
     n_days=load_kw.shape[0]
     if day_range is None: day_range=range(n_days)
     # histories of errors (kWh) for quantile: store per-day full vectors of (actual_net - pred_net) at plan/adj times
@@ -25,12 +29,10 @@ def run_backtest(price, dates, load_kw, pv_kw, fc, alpha=0.8, lam=1.0, rho=0.5, 
     E0_cur=E_INIT
     for d in range(0, maxd+1):
         E0_by_day[d]=E0_cur
-        price_d = price_row(price, d)
-<<<<<<< Updated upstream
-=======
-        if price_d.shape != (N,):
-            raise ValueError(f"day {d} price shape {price_d.shape}, expected ({N},)")
->>>>>>> Stashed changes
+        p_plan = price_row(price, d)
+        p_bill = price_row(bill_price, d)
+        if p_plan.shape != (N,) or p_bill.shape != (N,):
+            raise ValueError(f"day {d} price shape plan={p_plan.shape} bill={p_bill.shape}")
         if d not in day_range:
             # still need to step storage? For days before range (warmup), we must simulate with same policy to get correct E0.
             # To avoid complexity, require day_range starts at 0. We'll just simulate all from 0.
@@ -51,7 +53,7 @@ def run_backtest(price, dates, load_kw, pv_kw, fc, alpha=0.8, lam=1.0, rho=0.5, 
             Qvec=np.zeros(N)
         Q=float(np.mean(Qvec))
         net_risk=net_pred_kwh+Qvec
-        gP,_,_,_,Ebar_plan,_=solve_lp_plan(price_d, net_risk, E0_cur, E_tar, lam)
+        gP,_,_,_,Ebar_plan,_=solve_lp_plan(p_plan, net_risk, E0_cur, E_tar, lam)
         # adjustments
         gA_final=gP.copy()
         Ebar_final=np.zeros(N); Ebar_final[:]=Ebar_plan  # provisional, will overwrite segments
@@ -106,7 +108,10 @@ def run_backtest(price, dates, load_kw, pv_kw, fc, alpha=0.8, lam=1.0, rho=0.5, 
                         dd_=min(-b,M_ENERGY,max(0.0,ED*(E_prev-Rline))); c_=0.0
                     E_prev=E_prev+EC*c_-dd_/ED
                 E_at_Tk=E_prev
-                gA_new,_,_,Ebar_rem,_,_,_=solve_lp_adjust(price_d, net_risk_new, E_at_Tk, gP, Tk, E_tar, lam)
+                p_adj = p_plan.copy()
+                bias_p = float((p_bill[:Tk] - p_plan[:Tk]).mean())
+                p_adj[Tk:] = np.maximum(p_plan[Tk:] + bias_p, 1e-6)
+                gA_new,_,_,Ebar_rem,_,_,_=solve_lp_adjust(p_adj, net_risk_new, E_at_Tk, gP, Tk, E_tar, lam)
                 # commit only until next Tk (or end)
                 next_Tk=Tks[si+1] if si+1<len(Tks) else N
                 gA_final[Tk:next_Tk]=gA_new[Tk:next_Tk]
@@ -117,8 +122,8 @@ def run_backtest(price, dates, load_kw, pv_kw, fc, alpha=0.8, lam=1.0, rho=0.5, 
         c_act,d_act,r_act,w_act,E_arr=realtime(gA_final, load_act_kwh, pv_act_kwh, E0_cur, Ebar_final, rho)
         # costs
         up=(gA_final-gP).clip(min=0); down=(gP-gA_final).clip(min=0)
-        cost_plan_adj=float(np.sum(price_d*gP+1.5*price_d*up-0.5*price_d*down))
-        cost_emg=float(np.sum(5*price_d*r_act))
+        cost_plan_adj=float(np.sum(p_bill*gP+1.5*p_bill*up-0.5*p_bill*down))
+        cost_emg=float(np.sum(5*p_bill*r_act))
         cost_total=cost_plan_adj+cost_emg
         # update error histories (causal for future): plan error = actual_net - pred_net (without Q)
         actual_net=(load_kw[d,:]-pv_kw[d,:])*TAU

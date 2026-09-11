@@ -28,10 +28,6 @@ def validate_day(d, price, load_kw, pv_kw, out):
     probs=[]
     gP=out["gP"]; gA=out["gA"]; c=out["c_act"]; dd=out["d_act"]; r=out["r"]; w=out["w"]; E=out["E"]; E0=out["E0"]
     p=price_row(price, d)
-<<<<<<< Updated upstream
-=======
-    tol=1e-5
->>>>>>> Stashed changes
     # 1 balance actual
     resid=gA+pv_kw[d,:]*TAU+dd-load_kw[d,:]*TAU-c-w+r*0  # r already in balance? actual balance: gA+v+d+r = l+c+w
     # realtime guarantees gA+v+d+r-l-c-w=0 by construction (r=(-b-d)+, w=(b-c)+)
@@ -101,13 +97,8 @@ def main():
                 s0=t
                 while t<N and r[t]>1e-6: t+=1
                 s1=t
-<<<<<<< Updated upstream
                 p=price_row(price,i)
                 ev.append({"start":fmt_slot(s0).split("-")[0],"end":fmt_slot(s1-1).split("-")[1],"kwh":float(r[s0:s1].sum()),"cost":float(np.sum(5*p[s0:s1]*r[s0:s1]))})
-=======
-                pv=price_row(price,i)
-                ev.append({"start":fmt_slot(s0).split("-")[0],"end":fmt_slot(s1-1).split("-")[1],"kwh":float(r[s0:s1].sum()),"cost":float(np.sum(5*pv[s0:s1]*r[s0:s1]))})
->>>>>>> Stashed changes
             else: t+=1
         payload["spec"][s]={"table1":t1,"Gplan":float(o["gP"].sum()),"Gadj":float(o["gA"].sum()),
           "Gemg":float(o["r"].sum()),"cost_plan_adj":float(o["cost_plan_adj"]),"cost_emg":float(o["cost_emg"]),
@@ -143,12 +134,6 @@ def export_result3(price,dates,res, out_xlsx=None, template=None):
                 ws.cell(row=r,column=j,value=round(float(v),6))
             ws.cell(row=r,column=146,value=round(float(arr.sum()),6))
             if sheet=="计划购电量":
-<<<<<<< Updated upstream
-                # 全天购电费按计划费口径？模板要求全天购电费，建议填计划调整费分摊？这里填计划部分p*gP + 调整部分？为避免歧义，计划表填p*gP，调整表填调整相关+紧急？不，模板只有全天购电量/费两列。
-                # 口径：计划表：Gplan与p*Gplan；调整表：Gadj与“计划调整总费”(不含紧急，紧急另表)。论文另列紧急与总费。
-                up=(res[d]["gA"]-res[d]["gP"]).clip(min=0); down=(res[d]["gP"]-res[d]["gA"]).clip(min=0)
-=======
->>>>>>> Stashed changes
                 cost_pa=float(np.sum(p*res[d]["gP"]))
                 ws.cell(row=r,column=147,value=round(cost_pa,6))
             else:

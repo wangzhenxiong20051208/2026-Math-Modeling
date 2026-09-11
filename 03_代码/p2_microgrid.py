@@ -497,49 +497,50 @@ class Simulator:
     """逐日推进的因果仿真器：维护实际电池状态与预测误差历史。"""
 
     def __init__(self, LOAD: np.ndarray, PV: np.ndarray, price: np.ndarray,
-                 dates: list[str], eps: np.ndarray, fo: Forecaster):
+                 dates: list[str], eps: np.ndarray, fo: Forecaster,
+                 bill_price: np.ndarray | None = None):
         self.LOAD, self.PV, self.price = LOAD, PV, price
+        self.bill_price = price if bill_price is None else bill_price
         self.dates, self.eps, self.fo = dates, eps, fo
 
     def run_day(self, n: int, rp: RiskParams, e0: float, rule: str = "greedy",
                 allow_storage: bool = True) -> DayRecord:
         l_act = self.LOAD[n, :] * TAU
         v_act = self.PV[n, :] * TAU
-        price_d = np.asarray(
-            self.price[n] if np.ndim(self.price) == 2 else self.price,
-            dtype=float,
-        ).copy()
-<<<<<<< Updated upstream
-=======
-        if price_d.shape != (N,):
-            raise ValueError(f"day {n} price shape {price_d.shape}, expected ({N},)")
->>>>>>> Stashed changes
+        def _slice(arr):
+            a = np.asarray(arr, dtype=float)
+            out = a[n].copy() if a.ndim == 2 else a.copy()
+            if out.shape != (N,):
+                raise ValueError(f"day {n} price shape {out.shape}, expected ({N},)")
+            return out
+        price_plan = _slice(self.price)
+        price_bill = _slice(self.bill_price)
 
         if n == 0:
-            ex = cold_start_day(l_act, v_act, price_d)
+            ex = cold_start_day(l_act, v_act, price_bill)
             z = np.zeros(N)
             return DayRecord(n=n, date=self.dates[n], l_hat=z, v_hat=z,
                              n_hat=z, margin=z, n_risk=z, l_act=l_act,
                              v_act=v_act, exec=ex, Ebar=np.full(N, E_INIT),
-                             params=rp, rule=rule, price_1d=price_d)
+                             params=rp, rule=rule, price_1d=price_bill)
 
         l_hat, v_hat, n_hat = self.fo.energy(n)
         q = risk_margin(self.eps, n, rp)
         n_risk = n_hat + q
 
         if allow_storage:
-            plan = solve_dayahead(n_risk, e0, price_d, rp)
+            plan = solve_dayahead(n_risk, e0, price_plan, rp)
             g, Ebar = plan.g, plan.Ebar
         else:
             # 无储能时日前问题退化为逐段独立的新报童问题：g_t = max(Ñ_t, 0)
             g, Ebar = np.maximum(n_risk, 0.0), np.full(N, e0)
 
-        ex = execute_day(g, Ebar, l_act, v_act, e0, price_d, rp, rule,
+        ex = execute_day(g, Ebar, l_act, v_act, e0, price_bill, rp, rule,
                          allow_storage)
         return DayRecord(n=n, date=self.dates[n], l_hat=l_hat, v_hat=v_hat,
                          n_hat=n_hat, margin=q, n_risk=n_risk, l_act=l_act,
                          v_act=v_act, exec=ex, Ebar=Ebar,
-                         params=rp, rule=rule, price_1d=price_d)
+                         params=rp, rule=rule, price_1d=price_bill)
 
     def replay(self, n0: int, n1: int, rp: RiskParams, e0: float,
                rule: str = "greedy",

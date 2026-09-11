@@ -48,19 +48,11 @@ TK=[0,36,72,108]  # 0,6,12,18时对应的起始slot
 ISSUE_H=[0,6,12,18]
 
 def price_row(price, d: int) -> np.ndarray:
-<<<<<<< Updated upstream
-    """取第 d 天的 144 维电价。1 维=附件1（每天相同）；2 维=附件4（逐日）。"""
-    a = np.asarray(price, dtype=float)
-    if a.ndim == 2:
-        return a[d]
-    return a
-=======
     """当天 144 维电价。1 维=附件1；2 维=附件4 第 d 行。"""
     a = np.asarray(price, dtype=float)
     if a.ndim == 2:
         return np.asarray(a[d], dtype=float).reshape(-1)
     return a.reshape(-1)
->>>>>>> Stashed changes
 
 
 def load_all():
