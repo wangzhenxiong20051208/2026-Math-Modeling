@@ -2,11 +2,14 @@
 \ProvidesPackage{cumcm2026}[2026/08/23 v1.0 CUMCM 2026 paper style]
 
 \RequirePackage{geometry}
+% 2026 年竞赛格式规定（format2026.doc 第一条）：上下左右各留出至少 2.5 厘米的
+% 页边距。此处取正好 2.5cm，不得再缩小。
 \geometry{a4paper,left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm,headheight=15pt}
 
 \RequirePackage{amsmath,amssymb,mathtools}
 \RequirePackage{booktabs,array,tabularx,longtable,multirow}
 \RequirePackage{graphicx,float,caption,subcaption}
+\RequirePackage{etoolbox}
 \RequirePackage{enumitem}
 \RequirePackage{xcolor}
 \RequirePackage{listings}
@@ -21,34 +24,76 @@
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 
+% ---------------------------------------------------------------------------
+% 表格行距与列间距
+% cumcmthesis.cls 在每个 tabular 内部强制 \arraystretch=1.38，是为了配合它自己
+% 的 \baselinestretch=1.38。本文正文行距取 1.00（见下），若表格仍按 1.38 排版，
+% 表内行距反而比正文更松，既难看又浪费页数。此处复用 cls 已经保存的原始
+% \tabular，把表内行距收到与正文相称的 1.02，并把列间距从默认值收到 2.5pt。
+% 这两项只改版式，不改任何数字。
+% 注意：本文件后面的 \mcm@... 名称都依赖 @ 为字母，所以这里用 \makeatletter
+% 收尾而不是 \makeatother（\makeatother 会把 @ 变成 catcode 12 并一直延续到
+% 文件结尾，导致后面 \mcm@tokens@keywords 等名称被拆开而报未定义）。
+\makeatletter
+\renewenvironment{tabular}%
+  {\bgroup\renewcommand{\arraystretch}{1.02}\mcm@oldtabular}%
+  {\mcm@endoldtabular\egroup}
+\makeatletter
+\setlength{\tabcolsep}{2.5pt}
+
 \definecolor{cumcmblue}{HTML}{1F4E79}
 \definecolor{cumcmgray}{HTML}{F2F4F7}
 \definecolor{codegreen}{HTML}{2E6B4E}
 
 \setlength{\parindent}{2em}
 \setlength{\parskip}{0pt}
-\linespread{1.20}
+\linespread{1.00}
+% 中文段落几乎没有可断行的位置，长数字串与 \texttt 更容易溢出。
+% emergencystretch 允许 TeX 在必要时多拉伸词间距，从而消掉绝大多数
+% Overfull \hbox，而不需要删改任何正文。
+\setlength{\emergencystretch}{2.5em}
 \setlength{\abovedisplayskip}{6pt plus 2pt minus 2pt}
 \setlength{\belowdisplayskip}{6pt plus 2pt minus 2pt}
 \setlist{leftmargin=2em,labelsep=0.6em,itemsep=0.25em,topsep=0.4em,parsep=0pt}
 
 % 浮动体与正文、图表之间的留白（规范要求正文不超过 30 页，此处为无损压缩）
-\setlength{\floatsep}{6pt plus 2pt minus 2pt}
-\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
-\setlength{\intextsep}{6pt plus 2pt minus 2pt}
-\setlength{\abovecaptionskip}{4pt}
+\setcounter{topnumber}{4}
+\setcounter{bottomnumber}{3}
+\setcounter{totalnumber}{5}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.5}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.72}
+\setlength{\abovedisplayskip}{4pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{4pt plus 1pt minus 1pt}
+\setlength{\floatsep}{4pt plus 1pt minus 1pt}
+\setlength{\textfloatsep}{5pt plus 1pt minus 1pt}
+\setlength{\intextsep}{4pt plus 1pt minus 1pt}
+\setlength{\abovecaptionskip}{3pt}
 \setlength{\belowcaptionskip}{0pt}
-\setlength{\dblfloatsep}{6pt}
-\setlength{\dbltextfloatsep}{8pt}
+\setlength{\dblfloatsep}{4pt}
+\setlength{\dbltextfloatsep}{5pt}
 
 \titleformat{\section}{\centering\heiti\zihao{3}\bfseries}{\thesection}{0.8em}{}
 \titleformat{\subsection}{\heiti\zihao{4}\bfseries}{\thesubsection}{0.8em}{}
 \titleformat{\subsubsection}{\heiti\zihao{-4}\bfseries}{\thesubsubsection}{0.8em}{}
-\titlespacing{\section}{0pt}{1.2em}{0.8em}
-\titlespacing{\subsection}{0pt}{1.0em}{0.5em}
-\titlespacing{\subsubsection}{0pt}{0.8em}{0.4em}
+\titlespacing{\section}{0pt}{0.9em}{0.6em}
+\titlespacing{\subsection}{0pt}{0.8em}{0.4em}
+\titlespacing{\subsubsection}{0pt}{0.6em}{0.3em}
 
-\captionsetup{font=small,labelsep=quad,skip=4pt}
+\captionsetup{font=small,labelsep=quad,skip=3pt}
+
+% ---------------------------------------------------------------------------
+% 摘要专用页（format2026.doc 第三条：摘要含标题与关键词原则上不超过一页）
+% 摘要正文取五号、单倍行距；"摘 要"二字仍为三号，与论文封面体例一致。
+% 这样处理纯粹是版式压缩，不删减任何结果与数字。
+\AtBeginEnvironment{abstract}{\zihao{5}\linespread{1.0}\selectfont
+  \setlength{\topsep}{0pt}\setlength{\parsep}{0pt}}
+\renewcommand{\keywords}[1]{%
+  \renewcommand{\mcm@tokens@keywords}{#1}%
+  \par\vskip0.6ex
+  {\noindent\zihao{5}\heiti\mcm@cap@keywordsname：}~{\zihao{5}#1}%
+}
 \captionsetup[table]{position=top}
 \renewcommand{\figurename}{图}
 \renewcommand{\tablename}{表}

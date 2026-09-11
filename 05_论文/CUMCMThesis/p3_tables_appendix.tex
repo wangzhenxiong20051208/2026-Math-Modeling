@@ -1,0 +1,49 @@
+% 本文件由 03_代码/p3_tables.py 自动生成，请勿手工修改。
+% 数据源：06_支撑材料/p3_results.json
+
+\begin{table}[htbp]
+  \centering
+  \caption{各发布版本在 2025 年 2 月 1 日--12 月 31 日的净负荷预测误差（只统计发布时刻之后的时段）}
+  \label{tab:p3-skill}
+  \footnotesize
+  \begin{tabular}{lrrrr}
+    \toprule
+    预报版本 & 逐时段绝对偏差之和/kWh & 全天电量偏差/kWh & 符号偏差/kWh & 相对日净负荷 \\
+    \midrule
+    0{:}00 发布 & 7,462.0 & 3,903.9 & -769.1 & 7.27\% \\
+    6{:}00 发布 & 4,730.2 & 2,110.0 & -215.6 & 3.93\% \\
+    12{:}00 发布 & 2,557.4 & 1,197.7 & +667.7 & 2.23\% \\
+    18{:}00 发布 & 999.5 & 461.3 & +100.5 & 0.86\% \\
+    \midrule
+    问题二历史外推对照 & 6,372.4 & 3,116.9 & -8.5 & 5.80\% \\
+    \bottomrule
+  \end{tabular}
+  \par\vspace{2pt}
+  \begin{minipage}{.92\textwidth}\footnotesize
+    注：“逐时段绝对偏差之和”为 $\sum_t|N_t-\widehat N_t|$，衡量十分钟尺度的错位；“全天电量偏差”为 $|\sum_t(N_t-\widehat N_t)|$，衡量日总量口径，二者不可混用。符号偏差为正表示净负荷被\textbf{低估}。
+  \end{minipage}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{框架要求的七项检查在主策略全部 334 个交付日上的实测结果}
+  \label{tab:p3-check}
+  \footnotesize
+  \begin{tabular}{llr}
+    \toprule
+    检查项 & 实测最坏值 & 未通过天数 \\
+    \midrule
+    信息可用性 & 结构上恒成立 & 0 \\
+    时间转换 & 结构上恒成立 & 0 \\
+    计划锁定 & $1.02e-12$ kWh & 0 \\
+    费用核对 & $4.55e-13$ 元 & 0 \\
+    储能与供电 & $2.27e-13$ kWh & 0 \\
+    状态衔接 & $1.91e-11$ kWh & 0 \\
+    结果一致性 & 结构上恒成立 & 0 \\
+    \bottomrule
+  \end{tabular}
+  \par\vspace{2pt}
+  \begin{minipage}{.92\textwidth}\footnotesize
+    注：另有储电量越界最大量 $0.00e+00$~kWh、充放电越限最大量 $0.00e+00$~kWh、同时充放电时段数 $0$，均并入“储能与供电”一项。
+  \end{minipage}
+\end{table}
