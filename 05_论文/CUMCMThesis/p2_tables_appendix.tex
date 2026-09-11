@@ -70,3 +70,98 @@
     \bottomrule
   \end{tabular}
 \end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{微网在指定日期的计划购电量、全天购电量与购电费（问题二）}
+  \label{tab:p2-buy}
+  \footnotesize
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    日期 & 10:00 & 12:00 & 14:00 & 16:00 & 18:00 & 20:00 \\
+    \midrule
+    2025.3.20 & 0.00 & 589.01 & 0.00 & 489.63 & 712.12 & 0.00 \\
+    2025.6.21 & 0.00 & 0.00 & 0.00 & 343.48 & 550.29 & 0.00 \\
+    2025.9.23 & 0.00 & 473.63 & 0.00 & 540.59 & 754.15 & 0.00 \\
+    2025.12.21 & 0.00 & 991.46 & 0.00 & 850.06 & 742.70 & 0.00 \\
+    \midrule
+    \multicolumn{7}{l}{\textit{全天汇总（单位：kWh，费用单位：元）}} \\
+    \midrule
+    日期 & \multicolumn{2}{c}{计划购电量} & \multicolumn{2}{c}{紧急购电量} & \multicolumn{2}{c}{合计购电费} \\
+    \midrule
+    2025.3.20 & \multicolumn{2}{c}{68,165.47} & \multicolumn{2}{c}{0.00} & \multicolumn{2}{c}{41,546.86} \\
+    2025.6.21 & \multicolumn{2}{c}{41,410.82} & \multicolumn{2}{c}{0.00} & \multicolumn{2}{c}{25,342.18} \\
+    2025.9.23 & \multicolumn{2}{c}{66,665.55} & \multicolumn{2}{c}{1,012.68} & \multicolumn{2}{c}{47,837.19} \\
+    2025.12.21 & \multicolumn{2}{c}{100,405.38} & \multicolumn{2}{c}{0.00} & \multicolumn{2}{c}{65,004.18} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{储能设备在指定日期的充放电量及 $0{:}00$ 和 $24{:}00$ 的储电量（问题二）}
+  \label{tab:p2-storage}
+  \footnotesize
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    时段 & \multicolumn{2}{c}{2025.3.20} & \multicolumn{2}{c}{2025.6.21} & \multicolumn{2}{c}{2025.9.23} \\
+     & 充电 & 放电 & 充电 & 放电 & 充电 & 放电 \\
+    \midrule
+    0{:}00-4{:}00 & 8,099.25 & 129.91 & 1,740.43 & 0.00 & 8,945.44 & 46.80 \\
+    4{:}00-8{:}00 & 1,970.90 & 5,258.80 & 1,483.33 & 1,719.95 & 1,886.47 & 6,408.47 \\
+    8{:}00-12{:}00 & 6,192.83 & 2,777.38 & 5,693.41 & 0.00 & 4,911.33 & 1,896.62 \\
+    12{:}00-16{:}00 & 3,806.26 & 450.70 & 0.00 & 0.00 & 5,349.28 & 635.68 \\
+    16{:}00-20{:}00 & 302.08 & 5,657.14 & 0.00 & 4,736.32 & 113.40 & 5,890.59 \\
+    20{:}00-24{:}00 & 601.91 & 2,967.92 & 2,538.89 & 2,485.90 & 384.92 & 2,403.49 \\
+    \midrule
+    $0{:}00$ 储电量 & \multicolumn{2}{c}{2,094.13} & \multicolumn{2}{c}{4,685.60} & \multicolumn{2}{c}{1,245.61} \\
+    $24{:}00$ 储电量 & \multicolumn{2}{c}{1,812.43} & \multicolumn{2}{c}{5,060.32} & \multicolumn{2}{c}{1,475.54} \\
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{2025 年 12 月 21 日储能设备的充放电量及 $0{:}00$ 和 $24{:}00$ 的储电量}
+  \label{tab:p2-storage-dec}
+  \footnotesize
+  \begin{tabular}{lrr}
+    \toprule
+    时段 & 充电量/kWh & 放电量/kWh \\
+    \midrule
+    0{:}00-4{:}00 & 8,789.13 & 60.85 \\
+    4{:}00-8{:}00 & 1,862.99 & 1,410.66 \\
+    8{:}00-12{:}00 & 5,955.61 & 6,659.77 \\
+    12{:}00-16{:}00 & 5,982.69 & 2,220.11 \\
+    16{:}00-20{:}00 & 0.00 & 5,545.22 \\
+    20{:}00-24{:}00 & 635.34 & 2,843.90 \\
+    \midrule
+    $0{:}00$ 储电量/kWh & \multicolumn{2}{c}{1,970.17} \\
+    $24{:}00$ 储电量/kWh & \multicolumn{2}{c}{2,050.57} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{微网在指定日期的紧急购电量（问题二，按连续时段合并）}
+  \label{tab:p2-emg}
+  \footnotesize
+  \begin{tabular}{llrl}
+    \toprule
+    日期 & 紧急购电时间段 & 紧急购电量/kWh & 该日紧急费/元 \\
+    \midrule
+    2025.3.20 & \multicolumn{2}{c}{无} & 0.00 \\
+    2025.6.21 & \multicolumn{2}{c}{无} & 0.00 \\
+    \multirow{3}{*}{2025.9.23} & 20{:}20-20{:}40 & 806.60 & \multirow{3}{*}{6,522.02} \\
+     & 20{:}50-22{:}00 & 185.65 & \\
+     & 22{:}20-22{:}30 & 20.44 & \\
+    \midrule
+    2025.12.21 & \multicolumn{2}{c}{无} & 0.00 \\
+    \bottomrule
+  \end{tabular}
+  \par\vspace{2pt}
+  \begin{minipage}{.92\textwidth}\footnotesize
+    注：紧急购电量按框架要求逐段计算后，将同日连续发生紧急购电的时段合并为一个事件；合并后电量与逐段之和严格相等。
+  \end{minipage}
+\end{table}
+

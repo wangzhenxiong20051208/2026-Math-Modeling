@@ -17,6 +17,14 @@ _final.pdf
 _final.aux
 _final.log
 _final.out
+# 页数核算用的探针构建（xelatex -jobname=_probe，仅用于 pdftotext 数页）
+_probe.pdf
+_probe.aux
+_probe.log
+_probe.out
+
+# 运行前的临时快照目录，内容为旧结果，不入库
+.backup_pre_refund/
 
 # excel lock / temp
 ~$*
