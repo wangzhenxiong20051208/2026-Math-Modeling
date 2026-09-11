@@ -29,6 +29,7 @@ THESIS = ROOT / "05_论文" / "CUMCMThesis"
 OUT_TEX = THESIS / "p4_tables.tex"
 OUT_TEX_TAIL = THESIS / "p4_tables_appendix.tex"
 OUT_TEX_REFUND = THESIS / "p4_tables_refund.tex"
+OUT_TEX_COMBO = THESIS / "p4_combo_detail.tex"
 
 SPECIAL = ["2025-03-20", "2025-06-21", "2025-09-23", "2025-12-21"]
 DISP = {"2025-03-20": "2025.3.20", "2025-06-21": "2025.6.21",
@@ -129,15 +130,86 @@ def tab_price_struct(res: dict) -> str:
 
 
 # ---------------------------------------------------------------- 表：预测器选型
+def tab_select(res: dict) -> str:
+    """表：预测器超参数在 1 月预热期上的选型，及子窗口稳健性复核。
+
+    这张表存在的唯一理由是回应"参数是不是在评价区间上挑的"：它把选型窗口、
+    候选对照与子窗口复核一并摊开，读者可以自行判断选型是否可复现。
+    """
+    sel = res.get("预测器选型")
+    if not sel or "候选" not in sel:
+        return ("% 选型表需要预热期选型的结果文件，"
+                "请先运行：python3 03_代码/p4_microgrid.py --report-only\n")
+    cand = sel["候选"]
+    robust = sel.get("稳健性", [])
+    # 稳健性条目里既有三个候选子窗口、也有一条 β 重扫。候选子窗口的第一条就是
+    # 全窗口本身，与第一列重复，故丢掉；β 重扫的结果在 tab_beta 里另有表，
+    # 这里也不列。
+    cols = [r for r in robust
+            if r["最优预测器"] != "（β 逐时刻）"
+            and not r["子窗口"].startswith("全窗口")]
+    names = [r["预测器"] for r in cand]
+    lookup = [{c["预测器"]: c["平均绝对误差_元每kWh"] for c in r["前三"]}
+              for r in cols]
+    lines = [
+        r"\begin{table}[htbp]",
+        r"  \centering",
+        r"  \caption{预测器选型：在 2025 年 1 月预热期（评价区间之外）比较候选，"
+        r"并在子窗口上复核}",
+        r"  \label{tab:p4-select}",
+        r"  \footnotesize",
+        r"  \begin{tabular}{l" + "r" * (1 + len(cols)) + r"}",
+        r"    \toprule",
+        r"    候选预测器 & 全窗口（30 天）"
+        + "".join(f" & {r['子窗口'].split('（')[0]}（{r['天数']} 天）"
+                  for r in cols) + r" \\",
+        r"    \midrule",
+    ]
+    for i, nm in enumerate(names):
+        cell = [f"{cand[i]['平均绝对误差_元每kWh']:.4f}"]
+        for lk in lookup:
+            v = lk.get(nm)
+            cell.append("---" if v is None else f"{v:.4f}")
+        # 加粗只标全窗口第一名，避免给读者"选型用了多个窗口"的错觉。
+        if i == 0:
+            cell[0] = rf"\textbf{{{cell[0]}}}"
+            nm = rf"\textbf{{{nm}}}"
+        lines.append(f"    {nm} & " + " & ".join(cell) + r" \\")
+    betas = sel.get("β最优", {})
+    lines += [
+        r"    \midrule",
+        r"    \multicolumn{" + str(2 + len(cols))
+        + r"}{l}{\textit{选中的一组：权重 "
+        + "/".join(f"{w:g}" for w in sel["选中权重"])
+        + r"，}\ $\beta=(" + r",\,".join(
+            f"{betas.get(h, '---'):g}" if isinstance(betas.get(h), (int, float))
+            else "---" for h in ("6", "12", "18")) + r")$} \\",
+        r"    \bottomrule",
+        r"  \end{tabular}",
+        r"  \par\vspace{2pt}",
+        r"  \begin{minipage}{.95\textwidth}\footnotesize",
+        r"    注：单位为元/kWh，为各候选对全天 $144$ 段的平均绝对误差。``全窗口''"
+        r"即第 $1$--$30$ 天；``后段''只含滞后 $7/14/21$ 天样本齐备的日子（第 "
+        r"$22$--$30$ 天），用于排除早期滞后退化对排序的影响；``后半''为第 "
+        r"$15$--$30$ 天。三个窗口的第一名一致，故选型结果冻结后不再改动。"
+        r"$\beta$ 逐发布时刻单独选，取值见上表最后一行。",
+        r"  \end{minipage}",
+        r"\end{table}",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------- 表：候选复核
 def tab_forecast(res: dict) -> str:
-    """表：价格预测候选方案的误差对照与 β 选取。"""
+    """表：评价区间上的候选复核（样本外，不参与选型）。"""
     cand = res["价格预测候选"]
-    beta = res["β扫描"]
+    frozen_w = res.get("预测器选型", {}).get("选中权重")
     lines = [
         r"\begin{table}[htbp]",
         r"  \centering",
         r"  \caption{价格预测候选方案在 2025 年 2 月 1 日--12 月 31 日的平均"
-        r"绝对误差}",
+        r"绝对误差（\textbf{样本外复核}，不用于选型）}",
         r"  \label{tab:p4-forecast}",
         r"  \footnotesize",
         r"  \begin{tabular}{lrr}",
@@ -147,34 +219,74 @@ def tab_forecast(res: dict) -> str:
     ]
     for r in cand:
         name = r["预测器"]
-        bold = name.startswith("同星期加权 0.6")
-        nm = rf"\textbf{{{name}}}" if bold else name
+        # 加粗的是"本文冻结使用的那一个"，不是"本区间上最好的那一个"。
+        # 两者不同正是这张表想说明的事：按评价区间挑会挑到 0.6/0.3/0.1。
+        frozen = bool(frozen_w) and name.split("(")[0].strip().endswith(
+            "/".join(f"{w:g}" for w in frozen_w))
+        nm = rf"\textbf{{{name}（本文冻结使用）}}" if frozen else name
         lines.append(f"    {nm} & {r['平均绝对误差_元每kWh']:.4f}"
                      f" & {pct(r['相对均价'], 2)} \\\\")
-    lines += [
-        r"    \midrule",
-        r"    \multicolumn{3}{l}{\textit{日内对数偏差修正系数 }"
-        r"$\beta$\textit{ 的选取（对剩余时段的平均绝对误差）}} \\",
-        r"    $\beta$ & 6:00 版 & 12:00 版 \\",
-        r"    \midrule",
-    ]
-    for r in beta:
-        b = r["β"]
-        bold = abs(b - 0.5) < 1e-9
-        s = (lambda v: rf"\textbf{{{v:.4f}}}" if bold else f"{v:.4f}")
-        lines.append(f"    {b:g} & {s(r['6点版本_元每kWh'])}"
-                     f" & {s(r['12点版本_元每kWh'])} \\\\")
     lines += [
         r"    \bottomrule",
         r"  \end{tabular}",
         r"  \par\vspace{2pt}",
         r"  \begin{minipage}{.92\textwidth}\footnotesize",
         r"    注：``相对均价''以\textbf{评价区间（334 天）的均价} $0.7575$~元/kWh"
-        r"为基准，而非全年均价 $0.7662$~元/kWh。``全样本固定日内形状''使用了评价区间本身的均值，含未来信息，"
-        r"只是作为误差下界列出，不是可用策略。``近 $N$ 天滚动均值''系列表现不佳，"
-        r"原因见正文：把不同星期几混在一起平均，恰好抹掉了电价里唯一可利用的"
-        r"星期偏移。$\beta=0$ 即不做日内修正；$\beta=0.5$ 在三个更新时刻都最优或"
-        r"并列最优，$\beta\ge 1$ 时把已实现的偏差过度外推，反而变差。",
+        r"为基准，而非全年均价 $0.7662$~元/kWh。``全样本固定日内形状''使用了评价"
+        r"区间本身的均值，含未来信息，只是作为误差下界列出，不是可用策略。``近 "
+        r"$N$ 天滚动均值''系列表现不佳，原因见正文：把不同星期几混在一起平均，"
+        r"恰好抹掉了电价里唯一可利用的星期偏移。\textbf{本表若作选型依据，第一名"
+        r"会是 $0.6/0.3/0.1$（$0.0441$）；本文冻结使用的 $0.5/0.3/0.2$ 是 "
+        r"$0.0446$，差 $0.0005$ 元/kWh——这点差异就是``在评价区间上选参''能换来的"
+        r"虚高精度，本文刻意不取。}",
+        r"  \end{minipage}",
+        r"\end{table}",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------- 表：β 扫描
+def tab_beta(res: dict) -> str:
+    """表：日内修正系数 β 在评价区间上的扫描（样本外，不参与选型）。"""
+    beta = res["β扫描"]
+    sel = res.get("预测器选型", {})
+    frozen = sel.get("β最优", {})
+    keys = ["6点版本_元每kWh", "12点版本_元每kWh", "18点版本_元每kWh"]
+    heads = ["6:00 版", "12:00 版", "18:00 版"]
+    fz = [frozen.get("6"), frozen.get("12"), frozen.get("18")]
+    lines = [
+        r"\begin{table}[htbp]",
+        r"  \centering",
+        r"  \caption{日内对数偏差修正系数 $\beta$ 的扫描（对剩余时段的平均绝对"
+        r"误差，评价区间）}",
+        r"  \label{tab:p4-beta}",
+        r"  \footnotesize",
+        r"  \begin{tabular}{lrrr}",
+        r"    \toprule",
+        r"    $\beta$ & " + " & ".join(heads) + r" \\",
+        r"    \midrule",
+    ]
+    for r in beta:
+        b = r["β"]
+        cells = []
+        for k, f in zip(keys, fz):
+            v = r[k]
+            # 加粗"本文冻结使用的 β"那一行，而不是"本区间最优"那一行。
+            cells.append(rf"\textbf{{{v:.4f}}}" if f is not None
+                         and abs(b - f) < 1e-9 else f"{v:.4f}")
+        lines.append(f"    {b:g} & " + " & ".join(cells) + r" \\")
+    lines += [
+        r"    \bottomrule",
+        r"  \end{tabular}",
+        r"  \par\vspace{2pt}",
+        r"  \begin{minipage}{.92\textwidth}\footnotesize",
+        r"    注：$\beta=0$ 即不做日内修正。本表是\textbf{样本外复核}：加粗行是"
+        r"在 $1$ 月预热期上选出的冻结值 $\beta=(" + r",\,".join(
+            f"{v:g}" if isinstance(v, (int, float)) else "---" for v in fz)
+        + r")$，\textbf{不是}本区间的最优行——按本区间挑会指向 $\beta=0.5$。"
+        r"$\beta$ 在评价区间上更``好看''只是区间自身的偏好，本文不据此改动参数。"
+        r"$\beta\ge1.25$ 时把已实现的偏差过度外推，误差反而回升。",
         r"  \end{minipage}",
         r"\end{table}",
         "",
@@ -237,17 +349,22 @@ def tab_risk(res: dict) -> str:
     """表：价格加权分位数与普通分位数的对照，以及残差—价格的协方差检查。"""
     rw = res["风险_加权对照"]
     c = res["风险_价格协方差"]
+    # 「等权·下确界」与「纯加权相对抬升」是分位数定义修正后新增的两列。旧的结果
+    # 文件里没有，硬取会 KeyError；这里给出可执行的提示而不是让生成器崩掉。
+    if rw and "等权下确界均值_kWh" not in rw[0]:
+        return ("% 风险余量对照表需要分位数定义修正后的结果文件，"
+                "请先运行：python3 03_代码/p4_microgrid.py --report-only\n")
     lines = [
         r"\begin{table}[htbp]",
         r"  \centering",
-        r"  \caption{风险余量口径对照：以实际电价为权重的分位数 vs 普通分位数"
+        r"  \caption{风险余量口径对照：以实际电价为权重的分位数 vs 等权分位数"
         r"（正式区间按每 7 天抽样求均值）}",
         r"  \label{tab:p4-risk}",
         r"  \footnotesize",
-        r"  \begin{tabular}{lrrrr}",
+        r"  \begin{tabular}{lrrrrr}",
         r"    \toprule",
-        r"    $\alpha$ & 价格加权/(kWh) & 普通分位数/(kWh) & 抬高量/(kWh)"
-        r" & 相对抬升 \\",
+        r"    $\alpha$ & 价格加权/(kWh) & 等权·线性/(kWh) & 等权·下确界/(kWh)"
+        r" & 比线性插值 & 比下确界 \\",
         r"    \midrule",
     ]
     for r in rw:
@@ -256,19 +373,22 @@ def tab_risk(res: dict) -> str:
         # 而像是一个算错的数。
         v = r["相对抬升"]
         rel = "---" if v is None or not math.isfinite(v) else signed_pct(v)
+        q = r.get("纯加权相对抬升")
+        relq = "---" if q is None or not math.isfinite(q) else signed_pct(q)
         lines.append(f"    {r['α']:.2f} & {r['价格加权均值_kWh']:.3f}"
                      f" & {r['普通分位数均值_kWh']:.3f}"
-                     f" & {r['抬高_kWh']:+.3f} & {rel} \\\\")
+                     f" & {r['等权下确界均值_kWh']:.3f}"
+                     f" & {rel} & {relq} \\\\")
     lines += [
         r"    \bottomrule",
         r"  \end{tabular}",
         r"  \par\vspace{2pt}",
         r"  \begin{minipage}{.92\textwidth}\footnotesize",
-        r"    注：$\alpha=0.50$ 处的余量为负，因为净负荷预测误差的中位数本身"
-        r"略小于零（日间预测略偏高），此时``相对抬升''无意义，故以 ``---'' 表示。"
-        r"抬高的绝对量约 $1$~kWh/时段，之所以不大，是因为同一时段的价格在日与日"
-        r"之间变动有限；但方向上它把余量推向高代价时段，且实现成本为零，故保留"
-        r"为主口径。",
+        r"    注：``等权·线性''沿用问题二的做法，取 \texttt{numpy} 默认的线性插值"
+        r"分位数；``等权·下确界''与``价格加权''同取下确界定义，故末列是"
+        r"\textbf{纯粹的加权效应}，而倒数第二列还混入了取值约定之差。"
+        r"$\alpha=0.50$ 处的余量为负，因为净负荷预测误差的中位数本身略小于零"
+        r"（日间预测略偏高），此时``相对抬升''无意义，故以 ``---'' 表示。",
         r"  \end{minipage}",
         r"\end{table}",
         "",
@@ -404,12 +524,11 @@ def tab_strategies(res: dict) -> str:
         r"  \end{tabular}",
         r"  \par\vspace{2pt}",
         r"  \begin{minipage}{.92\textwidth}\footnotesize",
-        r"    注：三种策略决策时看到的价格信息不同，但\textbf{都在同一条实际"
-        r"价格路径上结算}，因此费用可直接相减。$\Delta J$ 取``固定电价参考''"
-        r"减``波动电价预测''，即适应波动电价值多少钱。``未来价格已知参考''假设"
-        r"当天价格在 0:00 已全部公布，作为\textbf{信息增强上界}单独报告——它给出"
-        r"价格预测还能改进多少空间，但题目并未提供这一信息条件，故不作为主策略，"
-        r"也不计$\Delta J$。三种策略各自独立标定参数，用的是各自信息集下的历史。",
+        r"    注：三种策略看到的价格信息不同，但\textbf{都在同一条实际价格路径上"
+        r"结算}，故费用可直接相减。$\Delta J$ 取``固定电价参考''减``波动电价预测''，"
+        r"即适应波动电价值多少钱。``未来价格已知参考''假设当天价格在 0:00 已全部"
+        r"公布，作为\textbf{信息增强上界}单独报告（题目未提供该信息条件，故不作"
+        r"主策略、不计入 $\Delta J$）。三者各自独立标定，用各自信息集下的历史。",
         r"  \end{minipage}",
         r"\end{table}",
         "",
@@ -458,6 +577,77 @@ def tab_combos(res: dict) -> str:
         r"当天更准的负载与光伏，也能用当天已实现的价格修正剩余时段的电价预测），"
         r"因此增量收益的来源更宽。所有方案都使用 0:00 发布的预报，组合列出的时刻"
         r"是额外使用的版本。",
+        r"  \end{minipage}",
+        r"\end{table}",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def tab_combo_detail(res: dict) -> str:
+    """表：4-3 八种预报组合在 12 条覆盖边上的边际价值。
+
+    原先这张表是手抄进 moved_body.tex 的，重算后数字对不上（正是它导致了
+    PDF 里的一批过时数字），故改为与其余各表同源生成。
+    """
+    rows = res.get("预报组合")
+    if not rows:
+        return "% 预报组合尚未计算（需以 --sweep 运行 p4_microgrid.py）\n"
+    cost = {}
+    for r in rows:
+        key = frozenset() if r["使用预报"] == "∅" else \
+            frozenset(int(t) for t in
+                      r["使用预报"].strip("{}").split(",") if t.strip())
+        cost[key] = r["合计费用_元"]
+    # 12 条覆盖边：从 ∅ 逐层向上，每个集合再补一个尚未加入的时刻。
+    edges = []
+    for s in sorted(cost, key=lambda k: (len(k), sorted(k))):
+        for h in (6, 12, 18):
+            if h in s or (s | {h}) not in cost:
+                continue
+            edges.append((s, h, cost[s] - cost[s | {h}]))
+    # 按起点集合分组（同一起点的几条边相邻），与原表的阅读顺序一致。
+    edges.sort(key=lambda e: (len(e[0]), sorted(e[0]), e[1]))
+    lo = min(range(len(edges)), key=lambda i: edges[i][2])
+
+    def name(s) -> str:
+        r"""集合列。空集用 \varnothing，其余写成 $\{6,18\}$ 的紧凑形式：
+        CJK 标点进数学模式在 xelatex 下会排版异常，故用半角逗号。"""
+        return r"$\varnothing$" if not s else \
+            r"$\{" + ",".join(str(h) for h in sorted(s)) + r"\}$"
+
+    lines = [
+        r"\begin{table}[htbp]",
+        r"  \centering",
+        r"  \caption{4-3 八种预报组合的边际价值（波动电价，各组合独立标定；"
+        r"单位：元）}",
+        r"  \label{tab:p4-combo-detail}",
+        r"  \footnotesize",
+        r"  \begin{tabular}{llrr}",
+        r"    \toprule",
+        r"    已有预报 $S$ & 再加一版 $h$ & 增量 $\Delta_h(S)$ & 折合 \\",
+        r"    \midrule",
+    ]
+    prev = None
+    for i, (s, h, d) in enumerate(edges):
+        if prev is not None and len(s) != len(prev):
+            lines.append(r"    \midrule")
+        prev = s
+        if i == lo:
+            tail_cells = (r"\textbf{%s} & \textbf{%s 万元}"
+                          % (fmt(d, 0), fmt(d / 1e4, 2)))
+        else:
+            tail_cells = f"{fmt(d, 0)} & {fmt(d / 1e4, 2)} 万元"
+        lines.append(f"    {name(s)} & ${h}{{:}}00$ & {tail_cells} \\\\")
+    lines += [
+        r"    \bottomrule",
+        r"  \end{tabular}",
+        r"  \par\vspace{2pt}",
+        r"  \begin{minipage}{.92\textwidth}\footnotesize",
+        r"    注：$\Delta_h(S)=J(S)-J(S\cup\{h\})$ 为在已有集合 $S$ 之上再订一版"
+        r" $h$ 所省下的费用。所有组合都在同一条附件 4 实际价格路径上结算，且各自"
+        r"重新标定 $\alpha,\rho,\lambda$，因此增量可以横向比较。加粗行是"
+        r"\textbf{边际价值最低}的一条：$18{:}00$ 已订时再订 $12{:}00$ 几乎不省钱。",
         r"  \end{minipage}",
         r"\end{table}",
         "",
@@ -597,16 +787,23 @@ HEADER = [
 def main() -> None:
     with open(SUP / "p4_results.json", encoding="utf-8") as fh:
         res = json.load(fh)
-    # 组合比较表放附录：它回答的是"要不要多订几个时刻的预报"这一延伸问题，
-    # 与问题三同一张表成对阅读更自然，正文只保留结论与指针。
+    # 正文只留两张最必需的交付表：
+    #   tab_branches  两个交付文件的全年结果——题目明确要求的两份文件，必须在正文；
+    #   tab_strategy  三种价格信息条件的策略对照——ΔJ 的全部数字，正文逐条讨论。
+    # 其余全部入附录。正文只有 30 页额度，把策略对照表放附录也有内容上的理由：
+    # 它与同名的费用分解图（附录图）成对阅读更自然，正文该处已给出全部关键数字。
     body = HEADER + [
         tab_branches(res),
-        tab_strategies(res),
     ]
     tail = HEADER + [
         tab_price_struct(res),
-        tab_skill4(res),
+        tab_strategies(res),
+        # 选型表紧挨候选复核表：前者回答"参数怎么定的"，后者回答"定下来之后
+        # 在评价区间上表现如何"，两张表连读才看得出选型与评价已经分开。
+        tab_select(res),
         tab_forecast(res),
+        tab_beta(res),
+        tab_skill4(res),
         tab_risk(res),
         tab_combos(res),
         tab_check(res),
@@ -617,10 +814,14 @@ def main() -> None:
         OUT_TEX_REFUND.write_text(
             HEADER[0] + "\n" + HEADER[1] + "\n\n" + tab_refund(res),
             encoding="utf-8")
+        OUT_TEX_COMBO.write_text(
+            HEADER[0] + "\n" + HEADER[1] + "\n\n" + tab_combo_detail(res),
+            encoding="utf-8")
         print(f"写入 {OUT_TEX}（正文：两分支汇总 + 策略对照）")
         print(f"写入 {OUT_TEX_TAIL}（附录：价格结构 + 预测选型 + 风险口径"
               f" + 组合比较 + 校验）")
         print(f"写入 {OUT_TEX_REFUND}（附录：退款口径敏感性）")
+        print(f"写入 {OUT_TEX_COMBO}（附录：八种组合的边际价值明细表）")
         return
     OUT_TEX.write_text("\n".join(body + tail), encoding="utf-8")
     print(f"写入 {OUT_TEX}")

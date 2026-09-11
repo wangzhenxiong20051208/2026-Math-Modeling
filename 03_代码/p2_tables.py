@@ -222,7 +222,7 @@ def tab_strategy(res: dict) -> str:
         r"  \begin{tabular}{lrrrrr}",
         r"    \toprule",
         r"    策略 & 计划购电费/元 & 紧急购电费/元 & 合计费用/元 & 期末储电量/kWh"
-        r" & 相对本模型 \\",
+        r" & 相对本模型费用 \\",
         r"    \midrule",
     ]
     base = st[keys[0]]["合计购电费_元"]
@@ -248,6 +248,15 @@ def tab_strategy(res: dict) -> str:
     else:
         note = (r"    注：“事后理想”用当天实际净负荷替换预测值求解同一日前 MILP，"
                 r"其费用不构成可执行方案，仅作乐观下界参考。")
+    # 末列以本模型费用为分母。另报以各基准费用为分母的常规节约率，两者分母不同，
+    # 在表注里写明，避免读者把「相对本模型费用」误读成「较该策略的节约率」。
+    save_avg = abs((st[keys[1]]["合计购电费_元"] - base)
+                   / st[keys[1]]["合计购电费_元"] * 100)
+    save_nos = abs((st[keys[2]]["合计购电费_元"] - base)
+                   / st[keys[2]]["合计购电费_元"] * 100)
+    note += (r" 末列以\textbf{本模型费用}为分母；若改以\textbf{各基准费用}为分母，"
+             rf"节约率为 ${save_avg:.2f}\%$（较预测均值策略）与 "
+             rf"${save_nos:.2f}\%$（较无储能策略）。两种分母口径不同，勿混用。")
     lines += [
         r"    \bottomrule",
         r"  \end{tabular}",

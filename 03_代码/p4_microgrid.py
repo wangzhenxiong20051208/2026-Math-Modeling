@@ -32,12 +32,14 @@ r"""
 
 价格预测（框架 3.1 节）
     先做简单、可追踪的预测，不引入复杂网络。本实现用**同星期加权**：
-        p̂⁰_{n,t} = Σ_k w_k · p_{n−7k, t},   w = 0.6 / 0.3 / 0.1
+        p̂⁰_{n,t} = Σ_k w_k · p_{n−7k, t}
     历史不足时退化为可取历史日的等权均值。日内按已完成时段的**对数价格
     偏差**修正后续时段：
         p̂^{(τ)}_{n,t} = p̂⁰_{n,t} · exp(β · mean_{s<τ} log(p_{n,s} / p̂⁰_{n,s}))
-    β 与滞后组合的选择由本文件 price_forecast_compare() 与 price_beta_sweep()
-    在同一评价区间上逐一对表确定，不是先验设定。
+    滞后集合、权重与 β 由 select_forecast_params() 在**1 月预热期**（第 1--30
+    天，落在正式评价区间之外）标定一次，随后整段评价区间冻结复用——参数不在
+    评价区间上再调，避免样本内选型。正式区间上的 price_forecast_compare() 与
+    price_beta_sweep() 只做样本外复核展示，不参与选型。
 
 联合风险（框架 3.2 与 3.3 节）
     框架 3.2 节强调 E[PR] = E[P]E[R] + Cov(P,R)，**不能**把两个期望直接相乘，
@@ -58,12 +60,18 @@ r"""
     据此，风险余量取**价格加权分位数**（框架 3.3 节 F_P(z) = E[P·1{N≤z}]/E[P]
     的经验版本，框架 3.4 节），权重是同一目标时段的历史实际电价：
         Ñ = N̂ + Q^P_α(ε)
-    risk_weight_effect() 给出加权与不加权的对照。效应是**温和但方向正确**的，
-    不含糊其辞：α=0.6 抬高 0.51 kWh（+4.4%），α=0.7 抬高 0.81 kWh（+3.1%），
-    α=0.8 抬高 0.98 kWh（+2.3%）——即每时段约 +1 kWh，全年约 +0.05 元/kWh
-    的一次购电规模。之所以不算大，是因为同一时段的价格在日与日之间变动有限
-    （日内同一时段的日间变异系数均值仅 0.17）；但方向上它把余量推向高代价时段，
-    且实现成本极低，故保留为主口径。--unweighted 可退回普通分位数供对照。
+    risk_weight_effect() 给出加权与不加权的对照。效应是**方向正确、幅度温和**的：
+    α=0.6 抬高 3.00 kWh（+25.6%），α=0.7 抬高 3.57 kWh（+13.8%），α=0.8 抬高
+    4.31 kWh（+10.0%）——即每时段约 +3~4 kWh。之所以不算大，是因为同一时段的
+    价格在日与日之间变动有限（日内同一时段的日间变异系数均值仅 0.17）；但方向上
+    它把余量推向高代价时段，且实现成本极低，故保留为主口径。--unweighted 可退回
+    普通分位数供对照。
+
+    注意对照口径：加权一侧按**加权经验分布的下确界**取值（论文问题四"价格加权
+    分位数"一节的公式），不加权一侧用 np.quantile 的默认线性插值约定（与问题二
+    一致）。因此表中的"抬高"同时含**加权**与**取值约定**两层差别，不是纯粹的
+    加权效应；两者的量级由 test_weighted_quantile() 与 risk_weight_effect() 分别
+    核验。
 
 计费（框架 5.3 节）
     全部系数乘**对应交付时段的实际电价**，不乘 0:00 的预测价：
@@ -215,23 +223,40 @@ class PriceForecastParams:
 
     断言 2 保证这一步是恒等式，实测偏差 4.4e-16。也就是说：同星期加权 ==
     附件 1 曲线 + 同星期残差的加权平均。滞后取 7/14/21 天（三个同星期样本），
-    权重 0.6/0.3/0.1 偏向最近一期——因为星期偏移本身是缓慢漂移的，越近的样本
-    越可信。这也解释了为什么"近 N 天滚动均值"（0.0827~0.0867）反而比不动脑筋
-    用固定曲线（0.0961）只好一点点：把不同星期几混在一起平均，恰恰把这个
-    0.19 元/kWh 的偏移平均掉了。候选对比见 price_forecast_compare()。
+    权重偏向最近一期——因为星期偏移本身是缓慢漂移的，越近的样本越可信。这也
+    解释了为什么"近 N 天滚动均值"（0.0827~0.0867）反而比不动脑筋用固定曲线
+    （0.0961）只好一点点：把不同星期几混在一起平均，恰恰把这个 0.19 元/kWh
+    的偏移平均掉了。候选对比见 price_forecast_compare()。
 
     日内再用对数偏差修正（β，见 price_beta_sweep()）：当天已完成时段的实际
     价格高于预测，说明当天整体水平偏高，按比例外推到剩余时段。
+
+    这里的 lags/weights/beta 只是**候选模板的默认值**；正式计算用的是
+    select_forecast_params() 在 1 月预热期选出的冻结参数。
     """
     lags: tuple = (7, 14, 21)
     weights: tuple = (0.6, 0.3, 0.1)
     beta: float = 0.5
     name: str = "同星期加权"
+    # (β@6:00, β@12:00, β@18:00)。None 表示三个时点一律取 beta。允许逐时点取值
+    # 是因为各时点可用于估计偏差的已完成时段数不同（6:00 只有 36 段、18:00 有
+    # 108 段），最优收缩系数本就未必相同。
+    beta_by_hour: tuple | None = None
+
+    def beta_at(self, hi: int) -> float:
+        """第 hi 个发布时刻的 β；hi = 0/1/2/3 对应 0:00/6:00/12:00/18:00。"""
+        if self.beta_by_hour is None or not 1 <= hi <= len(self.beta_by_hour):
+            return self.beta
+        return float(self.beta_by_hour[hi - 1])
 
     def label(self) -> str:
         w = "/".join(f"{x:g}" for x in self.weights)
+        if self.beta_by_hour is None:
+            b = f"β={self.beta:g}"
+        else:
+            b = "β=" + "/".join(f"{x:g}" for x in self.beta_by_hour)
         return (f"{self.name}(滞后{','.join(map(str, self.lags))};"
-                f"权重{w};β={self.beta:g})")
+                f"权重{w};{b})")
 
 
 PRICE_FORECAST = PriceForecastParams()
@@ -278,7 +303,8 @@ class PriceForecaster:
         价格算偏差，绝不用到尚未交付时段的价格。已完成样本过少时不修正。
         """
         base = self.forecast0(n)
-        if hi == 0 or self.pp.beta == 0.0:
+        b = self.pp.beta_at(hi)
+        if hi == 0 or b == 0.0:
             return base
         t0 = 36 * hi
         obs, pred = self.PRICE[n, :t0], base[:t0]
@@ -287,7 +313,7 @@ class PriceForecaster:
             return base
         bias = float(np.mean(np.log(obs[m] / pred[m])))
         out = base.copy()
-        out[t0:] = base[t0:] * np.exp(self.pp.beta * bias)
+        out[t0:] = base[t0:] * np.exp(b * bias)
         return np.maximum(out, 1e-6)
 
 
@@ -306,17 +332,19 @@ def _cand_forecast(PRICE: np.ndarray, n: int, lags: tuple,
 
 
 def price_forecast_compare(PRICE: np.ndarray) -> pd.DataFrame:
-    """价格预测候选方案的逐一对表，用于选定主策略的预测器。
+    """价格预测候选方案在**正式评价区间**上的逐一对表（样本外复核）。
 
     框架 3.1 节要求"先做简单、可追踪的预测，并明确误差评价方式"，同时允许
-    "只有在给出明确理由时才引入更复杂模型"。这里把常见候选放在同一评价区间
-    上比 MAE，避免把预测器选择变成先验设定。候选包含：
+    "只有在给出明确理由时才引入更复杂模型"。这张表展示各候选在正式区间上
+    的样本外表现，**不参与选型**——选型由 select_forecast_params() 在 1 月
+    预热期完成并冻结。候选包含：
 
       昨天同时段            最朴素的持续预测
       同星期（上周同一天）   捕捉星期效应，但只用一个样本
       近 7/14/28 天滚动均值  平滑但抹掉了星期结构
-      同星期加权 0.6/0.3/0.1 本文采用
       同星期等权 1/3        用于确认"加权"本身有没有用
+      同星期加权 0.5/0.3/0.2 / 0.6/0.3/0.1
+                          用于确认权重怎么给
       全样本固定日内形状     把形状与水平分开、水平取全样本均值（含未来信息，
                           是事后口径，仅作下界参照，不是可用策略）
     """
@@ -346,50 +374,98 @@ CANDIDATES = [
 ]
 
 
-def forecast_select_check(PRICE: np.ndarray, lo: int, hi: int) -> dict:
-    """在一个**任意的**窗口上重做预测器选型，用于检验"选参没有用未来数据"。
+def select_forecast_params(PRICE: np.ndarray, lo: int, hi: int
+                           ) -> tuple[PriceForecastParams, dict]:
+    """在**预期间** [lo, hi) 上一次性选定价格预测器的权重与 β。
 
-    框架第八节第 2 条要求"选参同样只用过去数据"。本文的预测器超参数若只在
-    评价区间（2--12 月）上对表选出，就属于在评价区间上倒选，报告的精度偏乐观。
-    这里在 **1 月预热期**（完全落在正式评价区间之外）上重做同一套对表：如果
-    胜出的仍是同一族预测器、且最优值与评价区间上的选择差得很小，则说明结论
-    不依赖倒选；如果两处结论冲突，就必须以预热期为准并如实说明。
+    框架第八节第 2 条要求"选参同样只用过去数据"。因此预测器超参数**只在正式
+    评价区间之前的窗口上选一次**，随后整段评价区间冻结使用；评价区间上报出的
+    精度与费用因此是真正的样本外结果，不存在"用考试答案选方法"的问题。
+
+    β 逐发布时刻单独选：6:00 只有 36 段已完成样本、18:00 有 108 段，可用于
+    估计偏差的样本量不同，最优收缩系数本就未必相同。选择准则统一为"该版本对
+    剩余时段的 MAE 最小"。
+
+    返回 (选中参数, 选型记录)；选型记录原样进入结果文件，供论文报告选型窗口、
+    候选对照与最终取值。
     """
-    rows = []
-    for name, lags, w in CANDIDATES:
-        err = [float(np.abs(PRICE[n] - _cand_forecast(PRICE, n, lags, w)).mean())
-               for n in range(lo, hi)]
-        rows.append({"预测器": name, "平均绝对误差_元每kWh": float(np.mean(err))})
-    rows.sort(key=lambda r: r["平均绝对误差_元每kWh"])
-    best = rows[0]
-    # β 在同一窗口上的对表
-    beta_rows = []
-    for beta in (0.0, 0.25, 0.5, 0.75, 1.0, 1.25):
-        pf = PriceForecaster(PRICE, PriceForecastParams(
-            (7, 14, 21), (0.6, 0.3, 0.1), beta))
-        perl = []
-        for h in (0, 1, 2, 3):
-            t0 = 36 * h
-            perl.append(float(np.mean(
-                [np.abs(PRICE[n][t0:] - pf.forecast_at(n, h)[t0:]).mean()
-                 for n in range(lo, hi)])))
-        beta_rows.append({"β": beta, "各版本_元每kWh": perl})
-    best_beta = {int(h): min(beta_rows, key=lambda r: r["各版本_元每kWh"][h])["β"]
-                 for h in (1, 2, 3)}
-    return {
-        "窗口": f"第 {lo}--{hi - 1} 天",
+    scored = [(
+        name, lags, w,
+        float(np.mean([np.abs(PRICE[n] - _cand_forecast(PRICE, n, lags, w)).mean()
+                       for n in range(lo, hi)])),
+    ) for name, lags, w in CANDIDATES]
+    scored.sort(key=lambda r: r[3])
+    rows = [{"预测器": s[0], "平均绝对误差_元每kWh": s[3]} for s in scored]
+    best_name, lags, weights, best_err = scored[0]
+
+    # 稳健性：1 月只有 30 天，且前 21 天的滞后 14/21 天样本尚不可用（_cand_forecast
+    # 会按可用样本重归一权重）。为确认结论不是这段"退化期"造成的，把预热期再切成
+    # 三个子窗口重跑候选对照；若排序不变，选型就可以放心冻结。
+    robust = []
+    for rlo, rhi, rlab in ((lo, hi, f"全窗口（第 {lo}--{hi - 1} 天）"),
+                           (lo + 21, hi, f"后段（第 {lo + 21}--{hi - 1} 天，"
+                                         f"滞后样本齐备）"),
+                           (lo + 14, hi, f"后半（第 {lo + 14}--{hi - 1} 天）")):
+        if rhi - rlo < 5:
+            continue
+        rr = sorted(
+            (float(np.mean([np.abs(PRICE[n]
+                                   - _cand_forecast(PRICE, n, l, w)).mean()
+                            for n in range(rlo, rhi)])), nm)
+            for nm, l, w in CANDIDATES)
+        robust.append({"子窗口": rlab, "天数": rhi - rlo,
+                       "最优预测器": rr[0][1],
+                       "最优平均绝对误差_元每kWh": rr[0][0],
+                       "前三": [{"预测器": nm, "平均绝对误差_元每kWh": e}
+                                for e, nm in rr[:3]]})
+
+    # β 在**同一预期间**上对表，且用**选中的权重**——此前写死 0.6/0.3/0.1，
+    # 权重一旦改变选型就与预测器不一致。
+    def _beta_sweep(wlo: int, whi: int) -> tuple[list, dict]:
+        rws = []
+        for beta in (0.0, 0.25, 0.5, 0.75, 1.0, 1.25):
+            pf = PriceForecaster(PRICE, PriceForecastParams(lags, weights, beta))
+            perl = []
+            for h in (0, 1, 2, 3):
+                t0 = 36 * h
+                perl.append(float(np.mean(
+                    [np.abs(PRICE[n][t0:] - pf.forecast_at(n, h)[t0:]).mean()
+                     for n in range(wlo, whi)])))
+            rws.append({"β": beta, "各版本_元每kWh": perl})
+        bb = {int(h): min(rws, key=lambda r: r["各版本_元每kWh"][h])["β"]
+              for h in (1, 2, 3)}
+        return rws, bb
+
+    beta_rows, best_beta = _beta_sweep(lo, hi)
+    # β 的稳健性：滞后样本齐备的后段窗口上重扫一次，看最优 β 是否漂移。
+    if hi - (lo + 21) >= 5:
+        _, rbb = _beta_sweep(lo + 21, hi)
+        robust.append({"子窗口": f"后段 β 重扫（第 {lo + 21}--{hi - 1} 天）",
+                       "天数": hi - (lo + 21), "最优预测器": "（β 逐时刻）",
+                       "最优平均绝对误差_元每kWh": None,
+                       "前三": [{"预测器": f"{RELEASE_HOURS[h]} 版本 β",
+                                 "平均绝对误差_元每kWh": rbb[h]}
+                                for h in (1, 2, 3)]})
+    pp = PriceForecastParams(
+        lags, weights, beta=0.5,
+        beta_by_hour=tuple(best_beta[h] for h in (1, 2, 3)))
+    record = {
+        "窗口": f"第 {lo}--{hi - 1} 天（正式评价区间之外）",
         "候选": rows,
-        "最优预测器": best["预测器"],
-        "最优平均绝对误差_元每kWh": best["平均绝对误差_元每kWh"],
+        "最优预测器": best_name,
+        "最优平均绝对误差_元每kWh": best_err,
+        "选中滞后": list(lags),
+        "选中权重": list(weights),
         "β对照": beta_rows,
         "β最优": {RELEASE_HOURS[h]: b for h, b in best_beta.items()},
-        # 四个版本在 β=0.5 处的 MAE，顺序与 RELEASE_HOURS 一致
-        "β=0.5处误差": [r["各版本_元每kWh"] for r in beta_rows
-                      if abs(r["β"] - 0.5) < 1e-9][0],
+        "稳健性": robust,
+        "选中的参数": pp.label(),
     }
+    return pp, record
 
 
-def verify_price_structure(PRICE: np.ndarray, FIXED: np.ndarray) -> dict:
+def verify_price_structure(PRICE: np.ndarray, FIXED: np.ndarray,
+                           pp: PriceForecastParams = PRICE_FORECAST) -> dict:
     """验证价格分解 P = F + R 的四个断言（PriceForecastParams 的推导依据）。
 
     这不是自选动作：框架 8.1/8.2 节要求对价格数据的结构做检查并如实报告，而
@@ -408,8 +484,8 @@ def verify_price_structure(PRICE: np.ndarray, FIXED: np.ndarray) -> dict:
     # 恒等式残差
     gaps = []
     for n in range(REPORT_START, REPORT_END):
-        idx = [n - lag for lag in PRICE_FORECAST.lags if n - lag >= 0]
-        w = np.array(PRICE_FORECAST.weights[:len(idx)], float)
+        idx = [n - lag for lag in pp.lags if n - lag >= 0]
+        w = np.array(pp.weights[:len(idx)], float)
         w = w / w.sum()
         lhs = (PRICE[idx] * w[:, None]).sum(axis=0)
         rhs = FIXED + (R[idx] * w[:, None]).sum(axis=0)
@@ -519,6 +595,20 @@ def _weighted_quantile(x: np.ndarray, q: float, w: np.ndarray) -> np.ndarray:
     历史**实际电价**，因此加权后的分布 F_P(z) = E[P·1{N≤z}]/E[P] 在
     "价格高 ⇒ 缺电代价大"的方向上给误差更大的权重。权重全为零的列退回
     普通分位数，避免除零。
+
+    定义取**加权经验分布的下确界**（与论文问题四"价格加权分位数"一节的公式
+    逐字一致）：
+
+        Q^P_q = inf{ z : Σ_i w_i·1[x_i ≤ z] / Σ_i w_i ≥ q }
+
+    即排序后累积权重比例首次达到 q 的那一个**样本值**。这是临界比规则所要的
+    分位数：按此取值，加权意义下的覆盖率恰好达到 q。权重全相等时它精确退化
+    为经验分布分位数（np.quantile 的 inverted_cdf 约定）。
+
+    注意不要退回"在累积权重轴上线性插值"（np.interp）的写法：插值出的值可能
+    落在两个样本之间，其加权覆盖率并不等于 q（例如样本 [0,10] 等权、q=0.8 时
+    插值给 6，而加权覆盖率在该点只有 0.5），且权重全相等时也不退回任何标准
+    分位数。见本文件 test_weighted_quantile() 的自检。
     """
     o = np.argsort(x, axis=0)
     xs = np.take_along_axis(x, o, axis=0)
@@ -526,13 +616,62 @@ def _weighted_quantile(x: np.ndarray, q: float, w: np.ndarray) -> np.ndarray:
     cw = np.cumsum(ws, axis=0)
     tot = cw[-1]
     plain = np.quantile(x, q, axis=0)
-    out = np.empty(x.shape[1])
-    for j in range(x.shape[1]):
-        if not np.isfinite(tot[j]) or tot[j] <= 0:
-            out[j] = plain[j]
-        else:
-            out[j] = np.interp(q, cw[:, j] / tot[j], xs[:, j])
-    return out
+    ok = np.isfinite(tot) & (tot > 0)
+    # 权重和无效的列目标阈值取 +inf，于是 reached 恒为 False、走普通分位数；
+    # argmax 在整列为 False 时返回 0，由 hit 掩掉，不会误取第 0 个样本。
+    tgt = np.where(ok, q * tot, np.inf)[None, :]
+    reached = cw >= tgt
+    hit = reached.any(axis=0)
+    idx = reached.argmax(axis=0)
+    out = xs[idx, np.arange(x.shape[1])]
+    return np.where(hit, out, plain)
+
+
+def test_weighted_quantile() -> list[str]:
+    """加权分位数定义的自检，返回失败项列表（空 = 全部通过）。
+
+    三条性质，缺一不可：
+      1) 权重全相等时精确退回经验分布分位数（inverted_cdf 约定）；
+      2) 取值必是某个样本值（下确界定义不允许落在样本之间）；
+      3) 该点处的加权覆盖率 >= q，且是满足此条件的最小样本值。
+    """
+    bad: list[str] = []
+    checks = []
+    for x, w, q in [
+        (np.array([[0.0], [10.0]]), np.array([[1.0], [1.0]]), 0.8),
+        (np.array([[0.0], [10.0]]), np.array([[1.0], [1.0]]), 0.5),
+        (np.array([[0.0], [10.0]]), np.array([[3.0], [1.0]]), 0.8),
+        (np.arange(28.0).reshape(-1, 1), np.ones((28, 1)), 0.9),
+    ]:
+        checks.append((x, w, q))
+    for i, (x, w, q) in enumerate(checks):
+        got = _weighted_quantile(x, q, w)[0]
+        xs = np.sort(x[:, 0])
+        ws = w[np.argsort(x[:, 0]), 0]
+        # 1) 等权退回 inverted_cdf
+        if np.allclose(w[:, 0], w[0, 0]):
+            ref = float(np.quantile(x, q, axis=0, method="inverted_cdf")[0])
+            if not np.isclose(got, ref):
+                bad.append(f"自检{i}: 等权未退回 inverted_cdf（{got} vs {ref}）")
+        # 2) 取值必是样本值
+        if not np.any(np.isclose(got, xs)):
+            bad.append(f"自检{i}: 取值 {got} 不在样本中")
+        # 3) 覆盖率 >= q 且最小
+        cw = np.cumsum(ws)
+        cov = cw[np.isclose(xs, got)][0] / cw[-1]
+        if cov < q - 1e-12:
+            bad.append(f"自检{i}: 覆盖率 {cov:.4f} < q={q}")
+        smaller = xs[xs < got - 1e-12]
+        if smaller.size:
+            cws = np.cumsum(ws)[np.isclose(xs, smaller[-1])][0] / cw[-1]
+            if cws >= q - 1e-12:
+                bad.append(f"自检{i}: 存在更小的满足点 {smaller[-1]}")
+    # 4) 权重和为零退回普通分位数（不除零、不出 NaN）
+    z = _weighted_quantile(np.arange(28.0).reshape(-1, 1), 0.8,
+                           np.zeros((28, 1)))
+    if not np.isfinite(z[0]):
+        bad.append("自检4: 零权重未退回普通分位数（出现 NaN）")
+    return bad
 
 
 def _pool_slots(hist: np.ndarray, wp: np.ndarray | None, span: int = 2):
@@ -620,15 +759,23 @@ def risk_weight_effect(eps: np.ndarray, PRICE: np.ndarray,
     显著，故必须作为模型的一部分写进论文。
     """
     rows = []
+    ones = np.ones_like(PRICE)
+    ns = range(REPORT_START, REPORT_END, 7)
     for a in alphas:
-        w = [risk_margin4(eps, n, a, PRICE, weighted=True)
-             for n in range(REPORT_START, REPORT_END, 7)]
-        p = [risk_margin4(eps, n, a, PRICE, weighted=False)
-             for n in range(REPORT_START, REPORT_END, 7)]
+        w = [risk_margin4(eps, n, a, PRICE, weighted=True) for n in ns]
+        p = [risk_margin4(eps, n, a, PRICE, weighted=False) for n in ns]
+        # 与加权口径**同约定**的等权基线：权重恒为 1 的加权分位数精确等于经验
+        # 分布分位数（inverted_cdf），且走完全相同的合并时段逻辑。用它作分母，
+        # "相对抬升"才是纯粹的加权效应；用 p（问题二的线性插值约定）作分母则
+        # 会混入取值约定之差。两列都报，读者可自行核对。
+        q = [risk_margin4(eps, n, a, ones, weighted=True) for n in ns]
         wm, pm = float(np.mean(w)), float(np.mean(p))
+        qm = float(np.mean(q))
         rows.append({"α": a, "价格加权均值_kWh": wm,
                      "普通分位数均值_kWh": pm, "抬高_kWh": wm - pm,
-                     "相对抬升": (wm / pm - 1.0) if pm > 1e-9 else None})
+                     "相对抬升": (wm / pm - 1.0) if pm > 1e-9 else None,
+                     "等权下确界均值_kWh": qm,
+                     "纯加权相对抬升": (wm / qm - 1.0) if qm > 1e-9 else None})
     # pm 可能在 α≤0.5 时为负（误差中位数本身为负），此时"相对抬升"无意义，
     # 上面已置 None，避免 NaN 进入 JSON。
     return pd.DataFrame(rows)
@@ -1734,9 +1881,13 @@ def build_inputs() -> dict:
     fo = Forecaster(LOAD, PV, LOAD_FORECAST, PV_FORECAST)
     eps = build_error_table(LOAD, PV, fo)
     eps3 = build_eps3(LOAD, PV, fp, fo)
-    pf = PriceForecaster(PRICE)
+    # 预测器超参数**只在预期间（1 月，第 1--30 天）选一次**，随后整段评价区间
+    # 冻结。这样评价区间上的精度与费用才是样本外结果。
+    pf_params, pf_select = select_forecast_params(PRICE, 1, REPORT_START)
+    pf = PriceForecaster(PRICE, pf_params)
     return dict(LOAD=LOAD, PV=PV, dates=dates, PRICE=PRICE, FIXED=FIXED,
                 fp=fp, fo=fo, eps=eps, eps3=eps3, pf=pf,
+                pf_params=pf_params, pf_select=pf_select,
                 book=PriceBook(PRICE, FIXED, pf))
 
 
@@ -1852,8 +2003,18 @@ def main() -> None:
         "风险口径": "价格加权分位数" if weighted else "普通分位数（对照）",
     }
 
+    # ---- 价格加权分位数定义的自检（论文公式 ↔ 实现一致性）
+    wq_bad = test_weighted_quantile()
+    result["风险_加权分位数自检"] = {"失败项": wq_bad, "通过": not wq_bad}
+    print("\n价格加权分位数定义自检（下确界定义 ↔ 实现）：")
+    if wq_bad:
+        for b in wq_bad:
+            print(f"  [失败] {b}")
+    else:
+        print("  等权退回 inverted_cdf、取值必为样本值、覆盖率单调 —— 通过")
+
     # ---- 价格结构分解：P = 附件1曲线 + 星期偏移（预测器的推导依据）
-    ps = verify_price_structure(PRICE, S["FIXED"])
+    ps = verify_price_structure(PRICE, S["FIXED"], S["pf"].pp)
     result["价格结构"] = ps
     print("\n价格结构分解 P = 附件1曲线 + 残差：")
     print(f"  附件1 年平均 {ps['断言1_年平均值_附件1']:.6f} 元/kWh，"
@@ -1885,14 +2046,15 @@ def main() -> None:
     result["价格预测候选"] = cmp_df.to_dict("records")
     result["β扫描"] = beta_df.to_dict("records")
 
-    # 选参是否用了未来数据：在 1 月预热期（评价区间之外）上重做同一套对表
-    jan = forecast_select_check(PRICE, 1, REPORT_START)
-    result["预测器选型_一月预热期"] = jan
-    print("\n选型复核——在 1 月预热期（第 1--30 天，评价区间之外）重做对表：")
-    print(f"  最优预测器 {jan['最优预测器']}"
-          f"（{jan['最优平均绝对误差_元每kWh']:.4f} 元/kWh）；"
-          f"β 最优 {jan['β最优']}；β=0.5 处 "
-          + "/".join(f"{v:.4f}" for v in jan["β=0.5处误差"]))
+    # 选型窗口与选中的参数：预测器超参数只在 1 月（评价区间之外）选一次，
+    # 上面 价格预测候选 / β扫描 两张表因此是**样本外**复核，不是选型依据。
+    sel = S["pf_select"]
+    result["预测器选型"] = sel
+    print("\n预测器选型——只在 1 月预热期（第 1--30 天，评价区间之外）选一次，"
+          "随后整段评价区间冻结：")
+    print(f"  选中 {sel['选中的参数']}（1 月 MAE "
+          f"{sel['最优平均绝对误差_元每kWh']:.4f} 元/kWh）")
+    print("  正式区间上的 价格预测候选 / β扫描 两表是样本外复核，不参与选型。")
     corr = risk_price_correlation(S["eps"], PRICE)
     result["风险_价格协方差"] = corr
     rw = risk_weight_effect(S["eps"], PRICE)

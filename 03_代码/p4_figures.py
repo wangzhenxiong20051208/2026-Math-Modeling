@@ -34,7 +34,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cumcm_plot import savefig, setup_plot  # noqa: E402
 from p1_microgrid import N, E_MIN, E_MAX, TAU  # noqa: E402
 from p4_microgrid import (  # noqa: E402
-    PriceForecaster, PRICE_FORECAST, load_attach4, load_attach1,
+    PriceForecaster, load_attach4, load_attach1,
+    select_forecast_params, REPORT_START,
 )
 
 setup_plot()
@@ -149,9 +150,14 @@ def fig1_structure() -> None:
 
 # ---------------------------------------------------------------- 图 2
 def fig2_forecast() -> None:
-    """图 2：两个发布版本的价格预测与当天实际电价（选四个特征日）。"""
+    """图 2：两个发布版本的价格预测与当天实际电价（选四个特征日）。
+
+    预测器参数与正式计算完全一致：只在 1 月预热期（评价区间之外）选一次、
+    冻结后全程复用，见 p4_microgrid.select_forecast_params。
+    """
     PRICE = load_attach4()
-    pf = PriceForecaster(PRICE, PRICE_FORECAST)
+    pp, _ = select_forecast_params(PRICE, 1, REPORT_START)
+    pf = PriceForecaster(PRICE, pp)
     idx = {str(np.datetime64("2025-01-01") + np.timedelta64(n, "D")): n
            for n in range(PRICE.shape[0])}
     t = hours()
@@ -161,7 +167,9 @@ def fig2_forecast() -> None:
         n = idx[d]
         act = PRICE[n]
         q0 = pf.forecast0(n)
-        q6 = pf.forecast_at(n, 6)
+        # hi 是发布序号（0/1/2/3 ↔ 0:00/6:00/12:00/18:00），不是小时数：
+        # 传 6 会让 t0 = 36*6 = 216（即 15:00），由图从第 36 时段画起就自相矛盾。
+        q6 = pf.forecast_at(n, 1)
         ax.plot(t, act, color=C_ACT, lw=2.0, label="实际电价", zorder=6)
         ax.plot(t, q0, color=C_FCOST, lw=1.2, ls="--", label="0:00 预测")
         ax.plot(t[36:], q6[36:], color=C_FCST6, lw=1.4, ls="-.",
