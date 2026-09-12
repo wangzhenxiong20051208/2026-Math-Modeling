@@ -16,8 +16,9 @@ import os
 
 # ==================== 路径（仓库内相对路径） ====================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, '01_题目', 'C题', '附件')
-OUTPUT_DIR = os.path.join(BASE_DIR, '06_支撑材料')
+ROOT_DIR = os.path.dirname(BASE_DIR)  # 上级目录即仓库根
+DATA_DIR = os.path.join(ROOT_DIR, '01_题目', 'C题', '附件')
+OUTPUT_DIR = os.path.join(ROOT_DIR, '06_支撑材料')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 PRICE_FILE = os.path.join(DATA_DIR, '附件1.xlsx')
@@ -59,6 +60,8 @@ def weekday_of(n):
 
 # ==================== 预测函数 ====================
 def predict_day(n, load_win=28, load_decay=0.3, pv_win=7, pv_decay=0.3):
+    # n=0（1月1日）无历史数据可用，返回零向量；其误差在 build_eps 中标记为 NaN，
+    # 不参与后续分位数计算，因此不影响正式区间（2-12月）的风险余量。
     if n == 0:
         return np.zeros(N)
     lo = max(0, n - load_win)
@@ -131,8 +134,9 @@ def solve_plan_lam(net_load, e0, lam):
     res = linprog(c_obj, A_eq=A_eq, b_eq=b_eq, A_ub=A_ub, b_ub=b_ub,
                   bounds=bounds, method='highs')
     if not res.success:
-        return None, None
-    return res.x[iG:iG + N].copy(), res.x[iE:iE + N].copy()
+        return None, None, None, None
+    return (res.x[iG:iG + N].copy(), res.x[iC:iC + N].copy(),
+            res.x[iD:iD + N].copy(), res.x[iE:iE + N].copy())
 
 
 # ==================== 执行层 ====================
@@ -160,17 +164,69 @@ def execute_day(g_plan, E_ref, l_act, v_act, e0, rho):
     return c, d, r, w, E, float(np.sum(price * g_plan)), float(np.sum(5.0 * price * r))
 
 
+# ==================== 结果校验 ====================
+def validate_day(rec, tol=1e-6):
+    """对单天执行结果做 6 项校验，返回问题列表（空 = 全部通过）。"""
+    problems = []
+    n = rec['n']
+    g, c, d, r, w, E = rec['g'], rec['c'], rec['d'], rec['r'], rec['w'], rec['E']
+    c_ref, d_ref = rec['c_ref'], rec['d_ref']
+    e0, E_end = rec['E0'], rec['E_end']
+    l_act = load_e[n]
+    v_act = pv_e[n]
+
+    # 1) 逐段供需平衡：g + r + v_act + d = l_act + c + w
+    lhs = g + r + v_act + d
+    rhs = l_act + c + w
+    resid = np.abs(lhs - rhs)
+    if resid.max() > tol * max(1.0, l_act.max()):
+        problems.append(f"供需平衡残差过大：{resid.max():.3e} kWh（第{n}天）")
+
+    # 2) 储电量递推自洽
+    Erec = [e0]
+    for t in range(N):
+        Erec.append(Erec[-1] + ETA * c[t] - d[t] / ETA)
+    err = np.abs(np.array(Erec[1:]) - E).max()
+    if err > tol:
+        problems.append(f"储电量递推偏差 {err:.3e} kWh（第{n}天）")
+
+    # 3) 储电量上下界
+    Eseq = np.concatenate([[e0], E])
+    if Eseq.min() < EMIN - tol:
+        problems.append(f"储电量低于下界 {Eseq.min():.4f} < {EMIN}（第{n}天）")
+    if Eseq.max() > EMAX + tol:
+        problems.append(f"储电量高于上界 {Eseq.max():.4f} > {EMAX}（第{n}天）")
+
+    # 4) 执行层充放电互斥（if-else 保证，数值复核）
+    both = (c > tol) & (d > tol)
+    if both.any():
+        problems.append(f"执行层存在 {int(both.sum())} 个时段同时充放电（第{n}天）")
+
+    # 5) LP 规划层互斥：参考充电量 ā 与参考放电量 d̄ 不应同时为正
+    lp_both = (c_ref > tol) & (d_ref > tol)
+    if lp_both.any():
+        problems.append(f"LP规划层存在 {int(lp_both.sum())} 个时段 ā/d̄ 同时为正（第{n}天）")
+
+    # 6) 紧急购电费一致性：逐段计算 vs 记录值
+    emg_check = float(np.sum(5.0 * price * r))
+    if abs(emg_check - rec['cost_emg']) > tol * max(1.0, abs(rec['cost_emg'])):
+        problems.append(f"紧急购电费不一致：{emg_check:.4f} vs {rec['cost_emg']:.4f}（第{n}天）")
+
+    return problems
+
+
 def run_day(n, e0, alpha, rho, lam, pred_params, eps_table):
     lw, ld, pw, pd = pred_params
     pnet = predict_day(n, lw, ld, pw, pd)
     sm = safety_margin(eps_table, n, alpha)
     ntilde = pnet + sm
-    g, E_ref = solve_plan_lam(ntilde, e0, lam)
+    g, c_ref, d_ref, E_ref = solve_plan_lam(ntilde, e0, lam)
     if g is None:
         return None
     c, d, r, w, E, cp, ce = execute_day(g, E_ref, load_e[n], pv_e[n], e0, rho)
     return {
-        'n': n, 'g': g, 'c': c, 'd': d, 'r': r, 'E': E,
+        'n': n, 'g': g, 'c_ref': c_ref, 'd_ref': d_ref,
+        'c': c, 'd': d, 'r': r, 'w': w, 'E': E,
         'E0': e0, 'E_end': E[-1], 'cost_plan': cp, 'cost_emg': ce,
         'cost_total': cp + ce
     }
@@ -261,6 +317,7 @@ current_alpha = best_a
 current_rho = best_r
 t1 = time.time()
 cal_count = 0
+val_failures = 0
 
 for n in range(REPORT_START, N_DAY):
     if (n - REPORT_START) % CAL_EVERY == 0:
@@ -277,11 +334,31 @@ for n in range(REPORT_START, N_DAY):
         current_alpha, current_rho = bar
         cal_count += 1
     rec = run_day(n, e, current_alpha, current_rho, best_lam, PRED_PARAMS, eps_full)
+    # 逐日校验
+    vp = validate_day(rec)
+    if vp:
+        val_failures += 1
+        for msg in vp:
+            print(f"  !! {msg}")
     all_records.append(rec)
     e = rec['E_end']
     e_at_start[n + 1] = e
 
 print(f"  运行完成，用时 {time.time()-t1:.1f}s，滚动标定 {cal_count} 次")
+print(f"  校验结果：{val_failures} 天有问题，{len(all_records) - val_failures} 天通过")
+
+# 跨日连续性校验：E_{n+1,0} == E_{n,144}
+cross_day_err = 0.0
+for i in range(len(all_records) - 1):
+    e_end_today = all_records[i]['E_end']
+    e_start_tmr = all_records[i + 1]['E0']
+    err = abs(e_end_today - e_start_tmr)
+    if err > cross_day_err:
+        cross_day_err = err
+if cross_day_err > 1e-9:
+    print(f"  !! 跨日连续性偏差最大值：{cross_day_err:.3e} kWh")
+else:
+    print(f"  跨日连续性校验通过（最大偏差 {cross_day_err:.3e} kWh）")
 
 # ==================== 费用汇总 ====================
 total_plan = sum(r['cost_plan'] for r in all_records)
