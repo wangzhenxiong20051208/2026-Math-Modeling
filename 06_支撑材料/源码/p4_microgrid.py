@@ -75,13 +75,21 @@ r"""
 
 计费（框架 5.3 节）
     全部系数乘**对应交付时段的实际电价**，不乘 0:00 的预测价：
-        主口径  C = Σ_t p_t g⁰_t + 1.5 Σ_t p_t (x_t − g⁰_t)₊ + 5 Σ_t p_t r_t
-        退款口径 C = Σ_t p_t g⁰_t + 1.5 Σ_t p_t (x_t − g⁰_t)₊
-                       − 0.5 Σ_t p_t (g⁰_t − x_t)₊ + 5 Σ_t p_t r_t
+        退款口径（主口径，与问题三一致）
+                C = Σ_t p_t g⁰_t + 1.5 Σ_t p_t (x_t − g⁰_t)₊
+                      − 0.5 Σ_t p_t (g⁰_t − x_t)₊ + 5 Σ_t p_t r_t
+        不退款口径（敏感性）
+                C = Σ_t p_t g⁰_t + 1.5 Σ_t p_t (x_t − g⁰_t)₊ + 5 Σ_t p_t r_t
     首项是**初始计划 g⁰**，不是最终生效量 x：1.5p_t 是上调部分的**总价**，不是
     "先付 p_t 再加 1.5p_t"成为 2.5p_t（问题三 7.3 节已就此说明）。
-    主口径下 g⁰ 已全额付费，故令 x_t ≥ g⁰_t、下调恒为零，第二式退化为 0；
-    退款口径作为独立敏感性由 --refund 运行，不与主口径混合。
+    主口径取退款，是题面"计划购电量高于调整购电量的部分，违约电价是交易时刻电
+    价的 50%"的字面读法：被取消的部分按 0.5p 计，故 (g⁰−x)₊ 的系数是 −0.5。
+    它等价于 C = Σ p_t x_t + 0.5 Σ p_t |x_t − g⁰_t| + 5 Σ p_t r_t，两侧对称。
+    不退款口径把"计划购电费用"理解为无条件全额、50% 只作**额外**违约费，此时
+    调减每度净付 1.5p，最优解不会调减，可外加 x_t ≥ g⁰_t 的简化约束。它与退款
+    口径**由同一份代码的 convention 参数切换**（见 CalConfig3/run_strategy43），
+    两者各自独立标定、独立回放，不与主口径混合；--refund-main 可把 4-3 的
+    主结果与配套的策略对照、预报组合一并切到退款口径重算。
 """
 
 from __future__ import annotations
@@ -91,6 +99,7 @@ import copy
 import dataclasses
 import datetime
 import json
+import re
 import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -137,6 +146,9 @@ OUT_PBETA = OUT_DIR / "p4_price_beta.csv"
 OUT_RWEIGHT = OUT_DIR / "p4_risk_weight.csv"
 CACHE_DIR = OUT_DIR / "p4_cache"
 
+# 计费口径的两个取值。"main" 是**不退款**公式（4-2 无口径，该参数对它无效）；
+# 论文主口径取 "refund"，由 --refund-main 把 4-3 主结果、策略对照与预报组合
+# 一并切过去。字符串本身不改名，以免动到计划缓存键与既有 JSON 的键名。
 CONVENTIONS = ("main", "refund")
 PRICE_MODES = ("forecast", "fixed", "oracle")
 
@@ -1352,7 +1364,7 @@ def calibrate43(n0: int, e_at_window_start: float, cal: CalConfig3,
     """4-3 的滚动标定，目标同样是窗口内的**实际结算总费用**。
 
     mode / convention 必须原样转交 replay43：标定是在**该策略自己的信息集与
-    计费口径**下进行的，否则固定电价对照与退款口径敏感性会用另一套策略的
+    计费口径**下进行的，否则固定电价对照与不退款口径敏感性会用另一套策略的
     参数，对照就失去意义（沿用 p3 的同一原则）。
     """
     lo = max(0, n0 - cal.window)
@@ -1568,9 +1580,10 @@ def check_day43(rec: DayRecord43, tol: float = 1e-6) -> dict[str, list[str]]:
         return p
     if not np.isfinite(rec.price_hat0).all() or (rec.price_hat0 <= 0).any():
         p["信息边界"].append("0:00 决策价格非正或非有限")
-    # 调整权限：主口径下 x ≥ g⁰；且只有 S 内的交付块允许 x ≠ g⁰
+    # 调整权限：不退款口径（敏感性）下恒有 x ≥ g⁰，因为调减每度净付 1.5p；且只有
+    # S 内的交付块允许 x ≠ g⁰。退款主口径两侧都放开，故不设 x 与 g⁰ 的大小约束。
     if rec.convention == "main" and (rec.x < rec.g0 - 1e-6).any():
-        p["调整权限"].append("主口径出现调减")
+        p["调整权限"].append("不退款口径出现调减")
     for hi, (a, b) in enumerate(BLOCK_BOUNDS):
         if np.abs(rec.x[a:b] - rec.g0[a:b]).max() <= 1e-6:
             continue
@@ -1951,7 +1964,32 @@ def _daily_frame(summaries: list[dict]) -> pd.DataFrame:
                          for s in summaries])
 
 
+def _snapshot_if_flipped() -> None:
+    """默认路径会把 JSON 写回"不退款为主口径"的旧布局，静默撤掉 --refund-main。
+
+    在覆盖之前，若磁盘上的 JSON 已经是翻转后的布局，先留一份快照，免得一次
+    误跑就把费了小时级算力的退款臂连同对照、组合一起抹掉。
+    """
+    if not OUT_JSON4.exists():
+        return
+    try:
+        cur = json.loads(OUT_JSON4.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if "4-3 不退款口径" not in cur:
+        return
+    bak = OUT_DIR / ".backup_pre_refund"
+    bak.mkdir(exist_ok=True)
+    dst = bak / "p4_results.flipped.json"
+    if not dst.exists():
+        shutil.copyfile(OUT_JSON4, dst)
+        print(f"!!! 磁盘上的 {OUT_JSON4.name} 已是翻转后的布局；本次按默认路径"
+              f"重算会把它写回旧布局。\n    已先快照到 "
+              f"{dst.relative_to(OUT_DIR.parent)}。")
+
+
 def write_side_files(recs42, recs43, sm42, sm43, result: dict) -> None:
+    _snapshot_if_flipped()
     if recs42:
         pd.concat([detail_frame42(r) for r in recs42],
                   ignore_index=True).to_csv(OUT_DETAIL42, index=False)
@@ -1978,8 +2016,12 @@ def all_combos() -> list[tuple]:
 
 def run_combo4(S: tuple, cal43: CalConfig3, book: PriceBook,
                LOAD, PV, fp, eps3, fo, weighted: bool = True,
-               warmup: RiskParams | None = None) -> dict:
+               warmup: RiskParams | None = None,
+               convention: str = "main") -> dict:
     """4-3 的一个预报使用组合在波动电价下的整年回放（框架 6.2 节）。
+
+    `convention` 必须与主结果所用的计费口径一致：组合之间比的是预报信息的
+    价值，若主结果是退款口径而组合是不退款口径，差额里就混进了计费歧义。
 
     **每个组合必须用"它自己的信息集"标定参数。** CalConfig3 带着一个 S 字段，
     calibrate43 是按 cal.S 回放标定窗口的；若只把 S 传给部署用的
@@ -1991,7 +2033,7 @@ def run_combo4(S: tuple, cal43: CalConfig3, book: PriceBook,
     cal = _replace(cal43, S=tuple(S))
     recs_all, cal_rows = run_strategy43(cal, book, "forecast", LOAD, PV,
                                         fp, eps3, fo, S=S, weighted=weighted,
-                                        warmup=warmup)
+                                        warmup=warmup, convention=convention)
     recs = recs_all[REPORT_START:REPORT_END]
     t = totals43(recs)
     t["使用预报"] = combo_name(S)
@@ -2088,7 +2130,9 @@ def run_main_strategies(S: dict, cal42: CalConfig, cal43: CalConfig3,
 def run_strategy_comparison(S: dict, cal42: CalConfig, cal43: CalConfig3,
                             weighted: bool,
                             warmup42: RiskParams | None = None,
-                            warmup43: RiskParams | None = None) -> pd.DataFrame:
+                            warmup43: RiskParams | None = None,
+                            convention: str = "main",
+                            branches: tuple = ("4-2", "4-3")) -> pd.DataFrame:
     """框架 6.1 节的三种策略对照：同一条实际价格路径，各自独立回放。
 
     ΔJ = J(固定电价参考) − J(波动电价预测)，即"适应波动电价值多少钱"。
@@ -2096,27 +2140,36 @@ def run_strategy_comparison(S: dict, cal42: CalConfig, cal43: CalConfig3,
 
     三个价格模式共用同一组 1 月预热期参数：预热期的信息集与价格模式无关，
     固定住它，ΔJ 才只反映评价区间内价格信息之差，而不掺入预热期的漂移。
+
+    `convention` 只作用于 4-3 那一支，且必须与 4-3 主结果所用的计费口径一致
+    ——否则 ΔJ 里混进了计费歧义。`branches` 用来只重算一支（4-2 没有计费口径，
+    切口径时无需重跑）。
     """
     rows = []
-    with ThreadPoolExecutor(max_workers=3) as ex:
-        futs = {m: ex.submit(run_strategy42, cal42, S["book"], m, S["LOAD"],
-                             S["PV"], S["eps"], S["fo"], E_INIT, weighted,
-                             False, warmup42)
-                for m in PRICE_MODES}
-        t42 = {m: totals42(f.result()[0][REPORT_START:REPORT_END])
-               for m, f in futs.items()}
-    for m in PRICE_MODES:
-        rows.append({"分支": "4-2", "策略": MODE_LABEL[m], "模式": m, **t42[m]})
-    d42 = t42["fixed"]["合计费用_元"] - t42["forecast"]["合计费用_元"]
-    rows.append({"分支": "4-2", "策略": "ΔJ（固定电价 − 波动电价）", "模式": "",
-                 "合计费用_元": d42,
-                 "相对降幅": d42 / t42["fixed"]["合计费用_元"]})
+    if "4-2" in branches:
+        with ThreadPoolExecutor(max_workers=3) as ex:
+            futs = {m: ex.submit(run_strategy42, cal42, S["book"], m, S["LOAD"],
+                                 S["PV"], S["eps"], S["fo"], E_INIT, weighted,
+                                 False, warmup42)
+                    for m in PRICE_MODES}
+            t42 = {m: totals42(f.result()[0][REPORT_START:REPORT_END])
+                   for m, f in futs.items()}
+        for m in PRICE_MODES:
+            rows.append({"分支": "4-2", "策略": MODE_LABEL[m], "模式": m,
+                         **t42[m]})
+        d42 = t42["fixed"]["合计费用_元"] - t42["forecast"]["合计费用_元"]
+        rows.append({"分支": "4-2", "策略": "ΔJ（固定电价 − 波动电价）",
+                     "模式": "", "合计费用_元": d42,
+                     "相对降幅": d42 / t42["fixed"]["合计费用_元"]})
+
+    if "4-3" not in branches:
+        return pd.DataFrame(rows)
 
     t43 = {}
     for m in PRICE_MODES:
         recs, _ = run_strategy43(cal43, S["book"], m, S["LOAD"], S["PV"],
                                  S["fp"], S["eps3"], S["fo"], weighted=weighted,
-                                 warmup=warmup43)
+                                 warmup=warmup43, convention=convention)
         t43[m] = totals43(recs[REPORT_START:REPORT_END])
         rows.append({"分支": "4-3", "策略": MODE_LABEL[m], "模式": m, **t43[m]})
     d43 = t43["fixed"]["合计费用_元"] - t43["forecast"]["合计费用_元"]
@@ -2124,6 +2177,183 @@ def run_strategy_comparison(S: dict, cal42: CalConfig, cal43: CalConfig3,
                  "合计费用_元": d43,
                  "相对降幅": d43 / t43["fixed"]["合计费用_元"]})
     return pd.DataFrame(rows)
+
+
+# ==================================================== 主口径切换：退款（与问题三一致）
+def risk_from_label(label: str, core: CorePreset) -> RiskParams:
+    """把 JSON 里记录的标定结果（``RiskParams.label()`` 的输出）还原成参数。
+
+    ``label()`` 只含 α/ρ/λ，**不含** window 与 min_samples。这两项是内核口径的
+    一部分，必须从 core 取，不能沿用 RiskParams 的默认值——jia 内核的
+    min_samples 是 8，而 RiskParams 的默认是 10。用错会让第 1 月预热的误差
+    分位数换一套取法，进而改变 2 月 1 日的日初储电量，全年数字都对不上。
+    """
+    nums = dict(re.findall(r"([αρλ])\s*=\s*([0-9.]+)", label))
+    missing = {"α", "ρ", "λ"} - set(nums)
+    if missing:
+        raise ValueError(f"无法从 {label!r} 还原出 {sorted(missing)}")
+    return RiskParams(alpha=float(nums["α"]), rho=float(nums["ρ"]),
+                      lam=float(nums["λ"]), window=core.risk_window,
+                      min_samples=core.min_samples)
+
+
+def recompute_refund_main(S: dict, core: CorePreset, weighted: bool, result: dict,
+                          do_strategies: bool, do_sweep: bool) -> int:
+    """把 4-3 的主计费口径定为**退款**（与问题三一致），只重算 4-3 相关部分。
+
+    为什么单开一条快路径：一次完整求解要先跑 1 月的两组 180 组联合标定，再跑
+    4-2、4-3、三模式对照与八组合扫描，耗时以小时计。而切换口径只改变 4-3 的
+    **费用函数**——价格预测器、风险口径、1 月标定结果、4-2 全部与口径无关，
+    可以原样复用既有 p4_results.json 里已记录的值。因此这里只做：
+
+      1. 4-3 主结果在退款口径下重放一次，落 result4-3.xlsx 与逐时段/逐日明细；
+      2. 把原来的不退款臂降级为敏感性（键 ``4-3 不退款口径``）；
+      3. 可选地把三模式对照与八组合扫描也换成退款口径。
+
+    口径只影响 4-3：DayRecord42 里没有 ``x`` 字段，日内不得修改计划，结构上
+    产生不了调减量，故 4-2 的两个口径数值完全重合，无需重算。
+
+    返回 0 表示成功。任何一处校验不过就返回非 0 且**不落盘**。
+    """
+    if not OUT_JSON4.exists():
+        print(f"!!! 找不到 {OUT_JSON4}，无法进入 --refund-main 快路径。"
+              "请先完整跑一次 p4_microgrid.py。")
+        return 1
+    old = json.loads(OUT_JSON4.read_text(encoding="utf-8"))
+    if "4-3 不退款口径" in old:
+        print("!!! 既有 JSON 已经是翻转后的布局（含 '4-3 不退款口径'）。"
+              "本开关**不幂等**：\n"
+              "    再跑一次会把已是退款臂的 '4-3 主策略' 误降级成不退款臂，"
+              "静默毁掉真正的退款臂。\n"
+              "    若要重来，请先从 06_支撑材料/.backup_pre_refund/ 恢复 "
+              "p4_results.json（或先完整重跑一次默认流程），再执行本开关。")
+        return 1
+
+    lab = old.get("4-3 1月联合标定", {}).get("选中")
+    if not lab:
+        print("!!! 既有 JSON 里没有 '4-3 1月联合标定'，无法复用标定结果。")
+        return 1
+    warmup43 = risk_from_label(lab, core)
+    cal43 = CalConfig3(min_samples=core.min_samples,
+                       alphas=core.warmup_alphas or CalConfig3.alphas,
+                       rhos=core.warmup_rhos or CalConfig3.rhos,
+                       lams=(warmup43.lam,))
+    print(f"\n复用 1 月标定：warmup43 = {warmup43.label()}"
+          f"（window={warmup43.window}, min_samples={warmup43.min_samples}）")
+    print(f"cal43: alphas={cal43.alphas} rhos={cal43.rhos} lams={cal43.lams} "
+          f"window={cal43.window} every={cal43.every} S={cal43.S}")
+
+    # ---- 1. 4-3 主结果：退款口径
+    t0 = time.time()
+    print("\n" + "=" * 78)
+    print("4-3 主结果：退款计费口径（与问题三一致）")
+    recs_all, cal_rows = run_strategy43(
+        cal43, S["book"], "forecast", S["LOAD"], S["PV"], S["fp"], S["eps3"],
+        S["fo"], weighted=weighted, warmup=warmup43, convention="refund",
+        verbose=True)
+    recs = recs_all[REPORT_START:REPORT_END]
+    tot = totals43(recs)
+    print(f"[4-3 退款主口径] 合计 {tot['合计费用_元']:,.2f} 元，"
+          f"计划费 {tot['计划费_元']:,.2f}、调整费 {tot['调整费_元']:,.2f}、"
+          f"紧急费 {tot['紧急费_元']:,.2f}；下调量 {tot['下调量_kWh']:,.2f} kWh"
+          f"（用时 {time.time() - t0:.1f}s）", flush=True)
+
+    # 既有 JSON 里若已记录同口径结果，先逐项核对——复现不了就说明口径之外的
+    # 某处（标定、内核、预报）与当初不同，此时必须停手而不是照写。
+    ref = old.get("4-3 退款口径")
+    if ref:
+        bad = [(k, tot.get(k), ref.get(k)) for k, v in ref.items()
+               if isinstance(v, (int, float)) and k in tot
+               and abs(tot[k] - v) > max(1e-6, 1e-11 * abs(v))]
+        if bad:
+            print("\n!!! 与既有 JSON 记录的 4-3 退款口径对不上，停止落盘：")
+            for k, got, want in bad:
+                print(f"    {k}: 本次 {got:,.6f}  记录 {want:,.6f}  "
+                      f"Δ {got - want:+.6f}")
+            return 1
+        print("    与既有 JSON 记录的退款臂逐项一致（含合计 "
+              f"{ref['合计费用_元']:,.2f} 元）")
+
+    # ---- 2. 角色互换：退款臂成为主口径，原不退款臂降为敏感性
+    # 旧 JSON 的布局是"4-3 主策略"=不退款臂 + 顶层 "4-3 校验*"/"4-3 标定记录"，
+    # 而 "4-3 退款口径" 把校验项嵌在自己里面。互换时要把这些附属键一并搬对位置，
+    # 否则 p4_tables.py 读到的校验表还是不退款臂的。
+    no_ref = dict(old.get("4-3 主策略") or {})
+    if not no_ref:
+        print("!!! 既有 JSON 里没有 '4-3 主策略'，无法把不退款臂降级为敏感性。")
+        return 1
+    for k in ("校验失败天数", "校验数值口径"):
+        if f"4-3 {k}" in old:
+            no_ref.setdefault(k, old[f"4-3 {k}"])
+
+    result.update(old)                      # 保留 4-2、诊断、价格结构等全部旧键
+    result["4-3 不退款口径"] = no_ref
+    if "4-3 标定记录" in old:
+        result["4-3 不退款标定记录"] = old["4-3 标定记录"]
+    result.pop("4-3 退款口径", None)         # 已升为主口径，避免同一臂留两个键
+    result["4-3 主策略"] = tot
+    result["4-3 校验失败天数"] = check_all4(recs, "43")
+    result["4-3 校验数值口径"] = validation_metrics4(recs, "43")
+    result["4-3 标定记录"] = cal_rows
+    print(f"    九项校验失败天数：{result['4-3 校验失败天数']}")
+    print(f"    4-3 不退款口径（敏感性）= "
+          f"{result['4-3 不退款口径']['合计费用_元']:,.2f} 元")
+
+    # 暂存：全部算完、全部核对通过之前不碰交付文件
+    stage = OUT_DIR / ".refund_stage"
+    stage.mkdir(exist_ok=True)
+    sm = summaries43(recs)
+    write_result43(sm, stage / "result4-3.xlsx")
+    pd.concat([detail_frame43(r) for r in recs],
+              ignore_index=True).to_csv(stage / "p4_detail_43.csv", index=False)
+    _daily_frame(sm).to_csv(stage / "p4_daily_43.csv", index=False)
+
+    # ---- 3. 三模式对照（只重算 4-3 那一支）
+    if do_strategies:
+        print("\n" + "=" * 78)
+        print("三种价格信息条件对照：4-3 改用退款口径重算（4-2 无口径、沿用既有）")
+        t0 = time.time()
+        new43 = run_strategy_comparison(S, None, cal43, weighted,
+                                        warmup43=warmup43,
+                                        convention="refund",
+                                        branches=("4-3",))
+        print(f"  用时 {time.time() - t0:.1f}s")
+        keep = [r for r in old.get("策略对照", []) if r.get("分支") != "4-3"]
+        merged = keep + new43.to_dict("records")
+        result["策略对照"] = merged
+        # 交付件要与 JSON 同步：否则 p4_strategies.csv 里 4-3 那一支还是旧口径。
+        pd.DataFrame(merged).to_csv(OUT_STRAT4, index=False)
+        print(new43.to_string(index=False, float_format=lambda v: f"{v:,.2f}"))
+
+    # ---- 4. 八种预报组合（必须在同一口径下重扫，否则组合价值里混入口径差）
+    if do_sweep:
+        print("\n" + "=" * 78)
+        print("八种预报组合：改用退款口径重扫（每个组合仍用它自己的信息集标定）")
+        t0 = time.time()
+        combos = all_combos()
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            futs = [ex.submit(run_combo4, c, cal43, S["book"], S["LOAD"],
+                              S["PV"], S["fp"], S["eps3"], S["fo"], weighted,
+                              warmup43, "refund")
+                    for c in combos]
+            newc = []
+            for c, f in zip(combos, futs):
+                row = f.result()
+                newc.append(row)
+                print(f"    {combo_name(c):>12s}  "
+                      f"{row['合计费用_元']:>14,.0f} 元", flush=True)
+        pd.DataFrame(newc).to_csv(OUT_COMBOS4, index=False)
+        result["预报组合"] = newc
+        print(f"  用时 {time.time() - t0:.1f}s")
+
+    OUT_JSON4.write_text(json.dumps(result, ensure_ascii=False, indent=1,
+                                    default=float), encoding="utf-8")
+    write_result43(sm)
+    shutil.copyfile(stage / "p4_detail_43.csv", OUT_DETAIL43)
+    shutil.copyfile(stage / "p4_daily_43.csv", OUT_DAILY43)
+    print(f"\n已写出 {OUT_XLSX43.name}、{OUT_DETAIL43.name}、{OUT_DAILY43.name}"
+          f" 与 {OUT_JSON4.name}")
+    return 0
 
 
 def main() -> None:
@@ -2139,7 +2369,15 @@ def main() -> None:
     ap.add_argument("--unweighted", action="store_true",
                     help="把价格加权分位数退回普通分位数（对照用）")
     ap.add_argument("--refund", action="store_true",
-                    help="额外跑 4-3 的退款计费口径（框架 5.3 节敏感性）")
+                    help="额外跑 4-3 的退款计费口径，写入 JSON 的 "
+                         "'4-3 退款口径' 键（框架 5.3 节）。退款已是论文主口径，"
+                         "经 --refund-main 后该键会被换名保存，故本开关主要用于"
+                         "重建原始退款臂")
+    ap.add_argument("--refund-main", action="store_true",
+                    help="把 4-3 的主计费口径定为退款（与问题三一致），只重算 "
+                         "4-3 相关部分：复用 JSON 里记录的 1 月标定，重放 4-3、"
+                         "重出 result4-3.xlsx 与明细，并把原不退款臂降级为敏感性。"
+                         "配 --strategies/--sweep 可连同对照与组合一起换口径")
     ap.add_argument("--report-only", action="store_true",
                     help="只重算价格预测与风险统计，不跑寻优")
     ap.add_argument("--core", default="jia", choices=sorted(CORES),
@@ -2260,6 +2498,14 @@ def main() -> None:
         print(f"--report-only 完成，用时 {time.time() - t_start:.1f}s")
         return
 
+    if args.refund_main:
+        # 切口径只影响 4-3 的费用函数：4-2、价格预测器、风险口径、1 月标定
+        # 都与口径无关，直接复用既有 JSON，不必付一次完整求解的代价。
+        rc = recompute_refund_main(S, core, weighted, result,
+                                   args.strategies, args.sweep)
+        print(f"\n--refund-main 结束，用时 {time.time() - t_start:.1f}s")
+        return rc
+
     # ---- 1 月联合标定：预热期参数在正式区间开始前离线选定，此后整年冻结。
     # 只用 1 月数据，第 0 天对所有候选相同；λ 选定后不再由滚动标定改动。
     warmup42 = warmup43 = None
@@ -2343,17 +2589,17 @@ def main() -> None:
         combos_df.to_csv(OUT_COMBOS4, index=False)
         result["预报组合"] = combos_df.to_dict("records")
 
-    # 先落盘主结果：退款口径只是敏感性，万一它出错也不该让几个小时的
-    # 主策略结果付诸东流。
+    # 先落盘一次：本函数的重头在标定与全年回放，万一后面某一臂出错，也不该让
+    # 几个小时的结果付诸东流。（--refund 之前的落盘内容会由它自己覆盖补齐。）
     write_side_files(recs42, recs43, sm42, sm43, result)
     print(f"\n主结果已写出，用时 {time.time() - t_start:.1f}s → {OUT_JSON4.name}")
 
     if args.refund:
-        # 框架 5.3 节：调减部分原价是否退回是题面未说明的歧义，主口径取
-        # "不退款、只追加"。这里把 4-3 在退款口径下**重新标定并重新回放**，
-        # 作为独立敏感性报告——同一套模型、同一套执行规则，只换费用函数。
+        # 框架 5.3 节：调减部分的原价是否退回，题面没有写死。这里把 4-3 在退款
+        # 口径下**独立标定并重新回放**——同一套模型、同一套执行规则，只换费用
+        # 函数。--refund-main 会把该臂提为主口径，本支路则保持原始布局。
         print("\n" + "=" * 78)
-        print("退款计费口径敏感性（4-3，独立标定与回放）")
+        print("退款计费口径（4-3，独立标定与回放）")
         recs_rf, _ = run_strategy43(cal43, S["book"], "forecast", S["LOAD"],
                                     S["PV"], S["fp"], S["eps3"], S["fo"],
                                     convention="refund", weighted=weighted,

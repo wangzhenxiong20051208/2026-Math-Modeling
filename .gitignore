@@ -26,6 +26,9 @@ _probe.out
 # 运行前的临时快照目录，内容为旧结果，不入库
 .backup_pre_refund/
 
+# --refund-main / --refund 的分阶段中间结果（含一份约 25 MB 的明细副本），不入库
+.refund_stage/
+
 # 问题三敏感性分析运行时自动生成的口径变体源码，由 p3_analysis.py 复现，不入库
 _p3_variants/
 
