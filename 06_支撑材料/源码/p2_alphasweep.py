@@ -17,6 +17,7 @@ from p2_microgrid import (
     REPORT_START, REPORT_END, TAU,
     Forecaster, Simulator, RiskParams, CalConfig,
     load_attach2, build_error_table, run_strategy, strategy_totals,
+    reference_price,
 )
 
 OUT = Path(__file__).resolve().parents[1] / "06_支撑材料" / "p2_alpha_sensitivity.json"
@@ -25,8 +26,9 @@ OUT = Path(__file__).resolve().parents[1] / "06_支撑材料" / "p2_alpha_sensit
 def main() -> None:
     import argparse
     ap = argparse.ArgumentParser(description="问题二 α 敏感性验证")
-    ap.add_argument("--core", choices=("hybrid", "jia"), default="hybrid",
-                    help="预测器内核，须与主运行 p2_microgrid.py 保持一致")
+    ap.add_argument("--core", choices=("jia", "hybrid"), default="jia",
+                    help="预测器内核，须与主运行 p2_microgrid.py 保持一致"
+                         "（后者默认 jia，即论文正文所用内核）")
     args = ap.parse_args()
 
     from p1_microgrid import load_attach1
@@ -54,7 +56,8 @@ def main() -> None:
             sim, CalConfig(rule="greedy", alphas=(a,), rhos=(1.0,), lams=(0.0,),
                            **cal_kw),
             verbose=False)
-        tot = strategy_totals(recs, REPORT_START, REPORT_END)
+        tot = strategy_totals(recs, REPORT_START, REPORT_END,
+                              reference_price(price))
         row = {
             "alpha": a,
             "弃电量_MWh": tot["弃电量_kWh"] / 1000.0,

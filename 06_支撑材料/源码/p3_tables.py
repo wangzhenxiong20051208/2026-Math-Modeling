@@ -50,6 +50,12 @@ def n0(x) -> str:
     return n(x, 0, clamp=0.5)
 
 
+def pct(x) -> str:
+    r"""带符号百分数，并把 % 转义成 \%——LaTeX 里裸 % 会注释掉整行剩余内容，
+    使表格行少一个 \\，下一行被并进同一行，报 "Extra alignment tab"。"""
+    return f"{float(x):+.2%}".replace("%", r"\%")
+
+
 def tb(s: str) -> str:
     r"""时间里的冒号写成 {;}，防止 LaTeX 把它当标点断行。"""
     return s.replace(":", "{:}")
@@ -245,10 +251,10 @@ def appendix_tables(A_: dict, cal: dict | None = None) -> str:
         c = cfgs[lab]
         d = (c["total"] - base) / base
         A(f"    {tb(lab)} & {n0(c['plan_adj'])} & {n0(c['emg'])} & "
-          f"\\textbf{{{n0(c['total'])}}} & {d:+.2%} & {n(c['E144_last'], 1)} \\\\")
+          f"\\textbf{{{n0(c['total'])}}} & {pct(d)} & {n(c['E144_last'], 1)} \\\\")
     A(r"    \midrule")
     A(f"    \\textbf{{主策略（全用）}} & {n0(main['plan_adj'])} & {n0(main['emg'])} & "
-      f"\\textbf{{{n0(main['total'])}}} & {(main['total'] - base) / base:+.2%} & "
+      f"\\textbf{{{n0(main['total'])}}} & {pct((main['total'] - base) / base)} & "
       f"{n(main['E144_last'], 1)} \\\\")
     A(r"    \bottomrule")
     A(r"  \end{tabular}")
@@ -319,7 +325,7 @@ def appendix_tables(A_: dict, cal: dict | None = None) -> str:
                   .replace(",", r",\;"))
         d = (c["total"] - main["total"]) / main["total"]
         A(f"    {pretty} & {n0(c['plan_adj'])} & {n0(c['emg'])} & {n0(c['total'])} & "
-          f"{d:+.2%} \\\\")
+          f"{pct(d)} \\\\")
     A(r"    \bottomrule")
     A(r"  \end{tabular}")
     A(r"  \par\vspace{2pt}")
@@ -347,9 +353,9 @@ def appendix_tables(A_: dict, cal: dict | None = None) -> str:
     A(f"    主策略：退款口径 $+$ 跨时段合并分位数 & {n0(main['plan_adj'])} & "
       f"{n0(main['emg'])} & \\textbf{{{n0(main['total'])}}} & --- \\\\")
     A(f"    调减不退款口径 & {n0(nrf['plan_adj'])} & {n0(nrf['emg'])} & {n0(nrf['total'])} & "
-      f"{(nrf['total'] - main['total']) / main['total']:+.2%} \\\\")
+      f"{pct((nrf['total'] - main['total']) / main['total'])} \\\\")
     A(f"    逐时段分位数 & {n0(ps['plan_adj'])} & {n0(ps['emg'])} & {n0(ps['total'])} & "
-      f"{(ps['total'] - main['total']) / main['total']:+.2%} \\\\")
+      f"{pct((ps['total'] - main['total']) / main['total'])} \\\\")
     A(r"    \bottomrule")
     A(r"  \end{tabular}")
     A(r"  \par\vspace{2pt}")

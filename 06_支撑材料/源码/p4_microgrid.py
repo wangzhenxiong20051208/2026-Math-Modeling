@@ -137,7 +137,7 @@ OUT_PBETA = OUT_DIR / "p4_price_beta.csv"
 OUT_RWEIGHT = OUT_DIR / "p4_risk_weight.csv"
 CACHE_DIR = OUT_DIR / "p4_cache"
 
-CONVENTIONS = ("main", "refund")
+CONVENTIONS = ("norefund", "refund")
 PRICE_MODES = ("forecast", "fixed", "oracle")
 
 MODE_LABEL = {
@@ -1174,7 +1174,7 @@ class DayRecord43:
     @property
     def cost_adj(self) -> float:
         up = np.maximum(self.x - self.g0, 0.0)
-        if self.convention == "main":
+        if self.convention == "norefund":
             return float(np.sum(COEF_UP * self.price_act * up))
         dn = np.maximum(self.g0 - self.x, 0.0)
         return float(np.sum(COEF_UP * self.price_act * up
@@ -1198,7 +1198,7 @@ class DayRecord43:
         up = np.maximum(self.x - self.g0, 0.0)
         dn = np.maximum(self.g0 - self.x, 0.0)
         base = float(np.sum(self.price_hat0 * self.g0))
-        if self.convention == "main":
+        if self.convention == "norefund":
             return base + float(np.sum(COEF_UP * self.price_hat0 * up))
         return base + float(np.sum(COEF_UP * self.price_hat0 * up
                                    - COEF_DOWN * self.price_hat0 * dn))
@@ -1255,7 +1255,7 @@ def initial_plan4(n: int, ntilde0: np.ndarray, e0: float,
 def run_day43(n: int, e0: float, S: tuple, params: RiskParams,
               book: PriceBook, mode: str, LOAD: np.ndarray, PV: np.ndarray,
               fp: ForecastPanel, eps3: np.ndarray, fo: Forecaster,
-              convention: str = "main", weighted: bool = True) -> DayRecord43:
+              convention: str = "norefund", weighted: bool = True) -> DayRecord43:
     """回放 4-3 的第 n 天：0:00 定初始计划，6/12/18 时按新预报调整。
 
     与问题三的差别集中在"价格"二字上，规则本身不变（框架 5.1 节："实时电价
@@ -1333,7 +1333,7 @@ def run_day43(n: int, e0: float, S: tuple, params: RiskParams,
 def replay43(n0: int, n1: int, e0: float, S: tuple, params: RiskParams,
              book: PriceBook, mode: str, LOAD: np.ndarray, PV: np.ndarray,
              fp: ForecastPanel, eps3: np.ndarray, fo: Forecaster,
-             convention: str = "main", weighted: bool = True
+             convention: str = "norefund", weighted: bool = True
              ) -> tuple[list[DayRecord43], float]:
     recs, e = [], float(e0)
     for n in range(n0, n1):
@@ -1347,7 +1347,7 @@ def replay43(n0: int, n1: int, e0: float, S: tuple, params: RiskParams,
 def calibrate43(n0: int, e_at_window_start: float, cal: CalConfig3,
                 book: PriceBook, mode: str, LOAD: np.ndarray, PV: np.ndarray,
                 fp: ForecastPanel, eps3: np.ndarray, fo: Forecaster,
-                convention: str = "main", weighted: bool = True
+                convention: str = "norefund", weighted: bool = True
                 ) -> tuple[RiskParams, list[dict]]:
     """4-3 的滚动标定，目标同样是窗口内的**实际结算总费用**。
 
@@ -1374,7 +1374,7 @@ def calibrate43(n0: int, e_at_window_start: float, cal: CalConfig3,
 
 def select_warmup43(core: CorePreset, book: PriceBook, mode: str,
                     LOAD: np.ndarray, PV: np.ndarray, fp: ForecastPanel,
-                    eps3: np.ndarray, fo: Forecaster, convention: str = "main",
+                    eps3: np.ndarray, fo: Forecaster, convention: str = "norefund",
                     weighted: bool = True
                     ) -> tuple[RiskParams, list[dict]]:
     """4-3 的 1 月联合标定：只用 1 月数据在 (α,ρ,λ) 上选预热期参数。
@@ -1406,7 +1406,7 @@ def select_warmup43(core: CorePreset, book: PriceBook, mode: str,
 def run_strategy43(cal: CalConfig3, book: PriceBook, mode: str,
                    LOAD: np.ndarray, PV: np.ndarray, fp: ForecastPanel,
                    eps3: np.ndarray, fo: Forecaster, S: tuple | None = None,
-                   e_init: float = E_INIT, convention: str = "main",
+                   e_init: float = E_INIT, convention: str = "norefund",
                    weighted: bool = True, verbose: bool = False,
                    warmup: RiskParams | None = None
                    ) -> tuple[list[DayRecord43], list[dict]]:
@@ -1569,7 +1569,7 @@ def check_day43(rec: DayRecord43, tol: float = 1e-6) -> dict[str, list[str]]:
     if not np.isfinite(rec.price_hat0).all() or (rec.price_hat0 <= 0).any():
         p["信息边界"].append("0:00 决策价格非正或非有限")
     # 调整权限：主口径下 x ≥ g⁰；且只有 S 内的交付块允许 x ≠ g⁰
-    if rec.convention == "main" and (rec.x < rec.g0 - 1e-6).any():
+    if rec.convention == "norefund" and (rec.x < rec.g0 - 1e-6).any():
         p["调整权限"].append("主口径出现调减")
     for hi, (a, b) in enumerate(BLOCK_BOUNDS):
         if np.abs(rec.x[a:b] - rec.g0[a:b]).max() <= 1e-6:
@@ -1599,7 +1599,7 @@ def check_day43(rec: DayRecord43, tol: float = 1e-6) -> dict[str, list[str]]:
     cp = float(np.sum(rec.price_act * rec.g0))
     up = np.maximum(rec.x - rec.g0, 0.0)
     ca = (float(np.sum(COEF_UP * rec.price_act * up))
-          if rec.convention == "main" else
+          if rec.convention == "norefund" else
           float(np.sum(COEF_UP * rec.price_act * up
                        - COEF_DOWN * rec.price_act
                        * np.maximum(rec.g0 - rec.x, 0.0))))
@@ -1652,7 +1652,7 @@ def validation_metrics4(recs, kind: str) -> dict:
             np.sum(r.price_act * r.g0) - r.cost_plan for r in recs)
         out["调整费重算最大偏差_元"] = _max_abs(
             (np.sum(COEF_UP * r.price_act * np.maximum(r.x - r.g0, 0.0))
-             - (0.0 if r.convention == "main" else
+             - (0.0 if r.convention == "norefund" else
                 np.sum(COEF_DOWN * r.price_act
                        * np.maximum(r.g0 - r.x, 0.0)))) - r.cost_adj
             for r in recs)
@@ -2176,7 +2176,9 @@ def main() -> None:
     # ---- 价格加权分位数定义的自检（论文公式 ↔ 实现一致性）
     wq_bad = test_weighted_quantile()
     result["风险_加权分位数自检"] = {"失败项": wq_bad, "通过": not wq_bad}
-    print("\n价格加权分位数定义自检（下确界定义 ↔ 实现）：")
+    # 注意：本行**不得**出现 ↔（U+2194）等 GBK 无法编码的字符，否则在
+    # Windows 中文控制台重定向输出时会抛 UnicodeEncodeError 而中断整个求解。
+    print("\n价格加权分位数定义自检（下确界定义 <-> 实现）：")
     if wq_bad:
         for b in wq_bad:
             print(f"  [失败] {b}")
@@ -2280,7 +2282,7 @@ def main() -> None:
               flush=True)
         warmup43, warmup43_rows = select_warmup43(
             core, S["book"], "forecast", S["LOAD"], S["PV"], S["fp"],
-            S["eps3"], S["fo"], "main", weighted)
+            S["eps3"], S["fo"], "norefund", weighted)
         print(f"  [4-3] 选中 {warmup43.label()}，1 月费用 "
               f"{warmup43_rows[[r['选中'] for r in warmup43_rows].index(True)]['1月总费用_元']:,.2f} 元，"
               f"2 月 1 日储电量 "

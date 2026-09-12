@@ -70,7 +70,7 @@ def fig1_profiles(df) -> None:
 def fig2_purchase(sol, df) -> None:
     """图 2：计划购电量与电价。"""
     t = hours()
-    buy = sol.g * M.TAU          # 每 10 分钟购电量 kWh
+    buy = sol.g                  # 决策变量已是**电量**口径，即每个 10 分钟区间的购电量 kWh
     price = df["电价"].to_numpy(float)
 
     fig, ax = plt.subplots(figsize=(9, 3.15))
@@ -98,10 +98,15 @@ def fig2_purchase(sol, df) -> None:
 
 
 def fig3_storage(sol) -> None:
-    """图 3：储能充放电功率与储电量轨迹（上下双栏，避免双轴量纲混淆）。"""
+    """图 3：储能充放电功率与储电量轨迹（上下双栏，避免双轴量纲混淆）。
+
+    注意：p1_microgrid 的决策变量 c/d 是**电量**口径（kWh/10min）。本图要画的是
+    功率（kW），故除以 Δt=1/6 h 还原为区间平均功率——每段内功率恒定，该换算
+    是精确的，功率上限 ±5000 kW 亦直接对应 M = P_max·Δt = 2500/3 kWh 的电量上限。
+    """
     t = hours()
-    chg = sol.c                     # kW
-    dis = sol.d                     # kW，向下画
+    chg = sol.c / M.TAU             # kW，由电量口径还原
+    dis = sol.d / M.TAU             # kW，向下画
     E = np.concatenate([[sol.E0], sol.E])
     tE = np.concatenate([[0.0], t + 10 / 60])
 
@@ -144,11 +149,13 @@ def fig3_storage(sol) -> None:
 def fig4_balance(sol, df) -> None:
     """图 4：全天能量平衡（供给侧构成 vs 需求侧构成）。"""
     tau = M.TAU
+    # 原始附件是功率（kW），需乘 Δt 化为电量；决策变量 g/c/d 本身已是电量（kWh），
+    # 不可重复乘 Δt，否则会整体偏小 6 倍。
     pv_kwh = float((df["光伏发电预测功率"].to_numpy(float) * tau).sum())
     load_kwh = float((df["小区负载"].to_numpy(float) * tau).sum())
-    buy_kwh = float((sol.g * tau).sum())
-    dis_kwh = float((sol.d * tau).sum())
-    chg_kwh = float((sol.c * tau).sum())
+    buy_kwh = float(sol.g.sum())
+    dis_kwh = float(sol.d.sum())
+    chg_kwh = float(sol.c.sum())
 
     supply = [("光伏发电", pv_kwh, C_PV), ("电网购电", buy_kwh, C_BUY),
               ("储能放电", dis_kwh, C_DIS)]
@@ -185,7 +192,9 @@ def fig4_balance(sol, df) -> None:
 
 def main() -> None:
     df = M.load_attach1()
-    sol = M.solve(df, M.Variant(name="main"))
+    # 图形必须取自**完整主模型**（MILP）。此前用默认 Variant（未加互斥约束的
+    # 结构松弛 LP），其最优解另有多个，会与论文表格口径不一致。
+    sol = M.solve(df, M.Variant(name="MILP（完整主模型）", binary=True))
     print("图形所用主模型目标值：", round(sol.obj, 4), "元")
 
     fig1_profiles(df)

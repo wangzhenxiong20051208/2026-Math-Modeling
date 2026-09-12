@@ -5,6 +5,30 @@ r"""
 
 多次预报驱动的滚动购电与储能调度模型
 --------------------------------------------------------------------------
+【本文件不是论文问题三数字的来源】
+
+  论文问题三的全部数字出自**另一条链路**：
+      p3_microgrid.py → p3_backtest.py → p3_analysis.py
+                      → p3_export.py（出 06_支撑材料/result3.xlsx）
+  本文件是问题三的**早期版本实现**，其 __main__ 流程会写 p3_results.json /
+  p3_detail.csv / p3_daily.csv / p3_cache/，但**这四个路径不在交付材料内，
+  该流程也从未作为论文依据运行过**。
+
+  本文件之所以随支撑材料提交，唯一原因是问题四的求解器 p4_microgrid.py 直接
+  import 了它的内核（ForecastPanel、load_attach3、forecast_energy_slots、
+  load_forecast_at、build_eps3、solve_adjust、DayRunner、CalConfig3、ALL_S、
+  RELEASE_HOURS、BLOCK_BOUNDS、COEF_UP、COEF_DOWN、COEF_EMG）。
+  **删掉本文件，问题四无法运行。** 详见 03_代码/PIPELINE.md。
+
+【计费口径的命名，切勿与论文"主口径"混淆】
+
+  本文件的 convention="norefund" 表示**计划费全额照付、不允许调减退款**；
+  convention="refund" 为框架 3.3 的退款口径。
+
+  论文 p3_section.tex 所称的"主口径（退款）"对应的是**上面那条链路的
+  p3_microgrid.py**，与本文件的 norefund 不是一回事。旧版曾把这个口径命名为
+  main，极易被读成"论文的主口径"，故改名为 norefund 以消除歧义。
+--------------------------------------------------------------------------
 实现依据：《问题三_解题思路与实现框架》
   01_题目/C题/问题三_解题思路与实现框架.md
 
@@ -18,7 +42,7 @@ r"""
     A_t = 1.5p(x_t-g⁰_t)_+ + 0.5p(g⁰_t-x_t)_+，紧急费 Σ5p r。允许无偿弃电时
     调减没有费用优势，因此主模型直接令 x_t ≥ g⁰_t，A_t 退化为 1.5p(x_t-g⁰_t)。
     框架 3.3 节的"退款口径" J^refund 作为独立敏感性检查，由 solve_adjust /
-    run_day3 / replay3 的 convention 参数（"main" / "refund"）切换；主流程
+    run_day3 / replay3 的 convention 参数（"norefund" / "refund"）切换；主流程
     以 REFUND_TAG 追加一个 convention="refund" 的策略并行回放。
 
 三个量必须分清（框架 3.1 节）：
@@ -94,8 +118,11 @@ COEF_DOWN = 0.5
 # 紧急购电的额外价格系数
 COEF_EMG = 5.0
 
-# 敏感性检查的计费口径： "main" = 框架 3.2 主口径；"refund" = 框架 3.3 退款口径
-CONVENTIONS = ("main", "refund")
+# 敏感性检查的计费口径： "norefund" = 计划费全额照付、不允许调减退款
+# （即框架 3.2），**不是**论文 p3_section.tex 所称的"主口径（退款）"；
+# "refund" = 框架 3.3 退款口径。该口径旧版曾沿用 main 这个名字，
+# 极易被误读成"论文的主口径"，故改名以消除歧义。
+CONVENTIONS = ("norefund", "refund")
 
 
 # ================================================================ 模块 1：数据与版本整理
@@ -104,11 +131,17 @@ class ForecastPanel:
     """附件 3 的长表化结果与按版本索引的预报值。
 
     F[hi, n, j] 是第 n 天第 hi 次发布对"发布后 j 小时"的预测功率（kW）。
-    j = 1..24 直接来自附件 3 的 24 列；j = 0 是发布时刻本身的锚点，附件
-    未提供，按框架 2.3 节的约定由**同一时刻早先版本**的预报补齐：
-        hi = 1,2,3 → 当天上一次发布的"预报 6 小时"（正好指向本次发布时刻）
-        hi = 0     → 前一日 18:00 发布的"预报 6 小时"（指向当日 0:00）
-        n  = 0     → 无更早版本，取 0（全年 0:00—0:10 的实际光伏恒为 0）
+    j = 1..24 直接来自附件 3 的 24 列；j = 0 是发布时刻本身的锚点，附件 3
+    未提供，按框架 2.3 节的约定取**发布时刻已经实现**的实测功率（附件 2）：
+        hi = 1,2,3 → 当天发布时刻前一时段的实测（36·hi − 1 列）
+        hi = 0     → 前一日末时段的实测（143 列）
+        n  = 0     → 之前无实测可用，取 0（全年 0:00 前后实际光伏恒为 0）
+
+    锚点必须取"已经实现"的量：发布时刻 t = 360·hi 分钟恰是十分钟时段边界，
+    按附件 1/2 的右端点命名，标注为该时刻的时段覆盖 [t−10, t)，此刻已经走完、
+    实测值已知；而覆盖 [t, t+10) 的时段要到 t+10 才有值，取它即把未来信息
+    漏进预报。**不得**改用更早版本的预报来替代实测——那既不必要（实测可得）
+    又更不准（实测锚点的全年 MAE 189.81 kW 优于预报锚点的 191.51 kW）。
     """
 
     F: np.ndarray                 # (4, N_DAY, 25)
@@ -116,8 +149,12 @@ class ForecastPanel:
     anchor_source: np.ndarray     # (4, N_DAY) 每个版本的锚点来源，供核对
 
 
-def load_attach3() -> ForecastPanel:
-    """读取附件 3，向下补齐日期，展开为长表并建立版本索引。"""
+def load_attach3(pv_kw: np.ndarray | None = None) -> ForecastPanel:
+    """读取附件 3，向下补齐日期，展开为长表并建立版本索引。
+
+    pv_kw 是附件 2 的光伏**实测**功率 (N_DAY, 144)，用于构造首端锚点；
+    不传时内部自行载入附件 2，以保证所有调用点口径一致。
+    """
     raw = pd.read_excel(ATTACH3, sheet_name=0)
     if raw.shape != (N_DAY * N_RELEASE, 2 + 24):
         raise ValueError(f"附件 3 形状应为 {(N_DAY * N_RELEASE, 26)}，实际 {raw.shape}")
@@ -159,21 +196,49 @@ def load_attach3() -> ForecastPanel:
     F = np.zeros((N_RELEASE, N_DAY, 25))
     F[:, :, 1:] = power.reshape(N_DAY, N_RELEASE, 24).transpose(1, 0, 2)
 
-    # ---- 首端锚点 F^0^{(τ)}
+    # ---- 首端锚点 F^0^{(τ)}：发布时刻**已经实现**的实测功率
+    if pv_kw is None:
+        from p2_microgrid import load_attach2
+        pv_kw = load_attach2()[1]
+    pv_kw = np.asarray(pv_kw, dtype=float)
+    if pv_kw.shape != (N_DAY, N):
+        raise ValueError(f"实测光伏形状应为 {(N_DAY, N)}，实际 {pv_kw.shape}")
+
     anchor_source = np.empty((N_RELEASE, N_DAY), dtype=object)
     for n in range(N_DAY):
         for hi in range(N_RELEASE):
             if hi > 0:
-                F[hi, n, 0] = F[hi - 1, n, 6]
-                anchor_source[hi, n] = f"{RELEASE_HOURS[hi-1]}:00 发布，预报 6 小时"
+                # 发布时刻 360·hi 是时段边界；标注该时刻的时段覆盖
+                # [360·hi−10, 360·hi)，在发布时刻已经走完，实测值已知。
+                F[hi, n, 0] = pv_kw[n, 36 * hi - 1]
+                anchor_source[hi, n] = (
+                    f"附件2实测 {RELEASE_HOURS[hi]}:00 前一时段（已实现）")
             elif n > 0:
-                F[0, n, 0] = F[3, n - 1, 6]
-                anchor_source[0, n] = "前一日 18:00 发布，预报 6 小时"
+                F[0, n, 0] = pv_kw[n - 1, N - 1]
+                anchor_source[0, n] = "附件2实测 前一日 23:50-24:00（已实现）"
             else:
-                # 2025-01-01 0:00 之前没有版本可用；该时刻的实际光伏为 0，
+                # 2025-01-01 0:00 之前没有实测可用；该时刻实际光伏为 0，
                 # 且不能使用之后才得到的真实值，故取 0 并在此显式声明。
                 F[0, n, 0] = 0.0
-                anchor_source[0, n] = "无更早版本，取 0（0:00 实际光伏为 0）"
+                anchor_source[0, n] = "全年首日 0:00 之前无实测，取 0"
+
+    # ---- 锚点前提的两项可证伪检查（取 0 的兜底必须真有依据）
+    if not np.isfinite(pv_kw).all():
+        raise ValueError("附件 2 光伏实测功率存在空值，不能作为锚点")
+    # 主张"全年 0:00 前后实际光伏恒为 0"才能用 0.0 兜底全年首日。若该前提
+    # 不成立，兜底值会污染 1 月 1 日 0:00-1:00 的光伏预报，此处直接报错。
+    midnight = np.concatenate([pv_kw[:, 0], pv_kw[:, N - 1]])
+    if midnight.max() > 1e-9:
+        raise ValueError(
+            f"0:00 前后实测光伏并非恒为 0（最大 {midnight.max():.2f} kW），"
+            f"全年首日的锚点不能再取 0，需另找依据")
+    # 锚点必须逐点等于所声明的实测列，防止后续改动悄悄换回预报值。
+    for n in range(N_DAY):
+        for hi in range(1, N_RELEASE):
+            if F[hi, n, 0] != pv_kw[n, 36 * hi - 1]:
+                raise ValueError(f"锚点与附件 2 实测不符：第 {n} 天 {hi} 版")
+    if N_DAY > 1 and F[0, 1, 0] != pv_kw[0, N - 1]:
+        raise ValueError("跨日锚点与附件 2 实测不符")
 
     # ---- 长表（模块 1 的交付物之一）
     hi_of = np.repeat(np.arange(N_RELEASE), N_DAY)
@@ -451,7 +516,7 @@ class AdjustPlan:
 
 def solve_adjust(ntilde: np.ndarray, g0_rem: np.ndarray, e0: float,
                  price_rem: np.ndarray, rp: RiskParams,
-                 convention: str = "main", etar: float = E_TAR) -> AdjustPlan:
+                 convention: str = "norefund", etar: float = E_TAR) -> AdjustPlan:
     """在剩余时段上求解调整模型（框架 4.3 节）。
 
     目标 = Σ A_t(y_t; g⁰_t) + Σ 5p r̄_t + λξ，原计划费是常数，不重复计入。
@@ -478,7 +543,7 @@ def solve_adjust(ntilde: np.ndarray, g0_rem: np.ndarray, e0: float,
 
     lb = d["lb"].copy()
     ub = d["ub"].copy()
-    if convention == "main":
+    if convention == "norefund":
         lb[iY:iY + m] = g0_rem          # x_t ≥ g⁰_t，a 自动等于上调量
         ub[iB:iB + m] = 0.0             # 禁掉下调量
     else:
@@ -617,7 +682,7 @@ def initial_plan(n: int, ntilde0: np.ndarray, e0: float, price: np.ndarray,
 def run_day3(n: int, e0: float, S: tuple, params: RiskParams,
              use_new_forecast: bool, LOAD: np.ndarray, PV: np.ndarray,
              price: np.ndarray, fp: ForecastPanel, eps: np.ndarray,
-             fo: Forecaster, convention: str = "main") -> DayRecord3:
+             fo: Forecaster, convention: str = "norefund") -> DayRecord3:
     """回放第 n 天：0:00 定计划 → 逐块执行 → 到达发布时刻则滚动调整。"""
     l_act = LOAD[n, :] * TAU
     v_act = PV[n, :] * TAU
@@ -667,7 +732,7 @@ def run_day3(n: int, e0: float, S: tuple, params: RiskParams,
         runner.run(a, b, x, Ebar)
 
     cost_plan = float(np.sum(price * g0))
-    if convention == "main":
+    if convention == "norefund":
         cost_adj = float(np.sum(COEF_UP * price * np.maximum(x - g0, 0.0)))
     else:
         cost_adj = float(np.sum(COEF_UP * price * np.maximum(x - g0, 0.0)
@@ -693,7 +758,7 @@ def setup(LOAD, PV, price, fp, fo) -> None:
 
 def replay3(n0: int, n1: int, e0: float, S: tuple, params: RiskParams,
             use_new_forecast: bool = True,
-            convention: str = "main") -> tuple[list[DayRecord3], float]:
+            convention: str = "norefund") -> tuple[list[DayRecord3], float]:
     """从 e0 出发回放 [n0, n1) 天，返回 (逐日记录, 末日储电量)。"""
     d = _SIM
     recs = []
@@ -760,7 +825,7 @@ class CalConfig3:
 
 def calibrate3(n0: int, e_at_window_start: float,
                cal: CalConfig3, use_new_forecast: bool = True,
-               convention: str = "main") -> tuple[RiskParams, list[dict]]:
+               convention: str = "norefund") -> tuple[RiskParams, list[dict]]:
     """在第 n0 天 0:00 用此前数据选择参数。
 
     对网格中每个组合，从窗口起点回放窗口内的历史日期，比较**实际总费用**
@@ -792,7 +857,7 @@ def _date_of(n: int) -> str:
 
 
 def run_strategy3(cal: CalConfig3, SOFTS: tuple, e_init: float = E_INIT,
-                  use_new_forecast: bool = True, convention: str = "main",
+                  use_new_forecast: bool = True, convention: str = "norefund",
                   verbose: bool = False) -> tuple[list[DayRecord3], list[dict]]:
     """整年滚动：预热 1 月，正式区间内每隔 cal.every 天重新标定一次参数。"""
     recs, cal_rows = [], []
@@ -817,7 +882,7 @@ def run_strategy3(cal: CalConfig3, SOFTS: tuple, e_init: float = E_INIT,
 
 # ================================================================ 校验
 def validate_day3(rec: DayRecord3, price: np.ndarray,
-                  convention: str = "main", tol: float = 1e-6) -> dict:
+                  convention: str = "norefund", tol: float = 1e-6) -> dict:
     """逐日复核，按框架 8.2 节的七项检查分组返回问题清单。"""
     info, tm, lock, cost, power, chain, consist = [], [], [], [], [], [], []
     l = _SIM["LOAD"][rec.n, :] * TAU
@@ -843,12 +908,12 @@ def validate_day3(rec: DayRecord3, price: np.ndarray,
         lock.append("计划/调整数组维度非法")
     if rec.g0.min() < -tol or rec.x.min() < -tol:
         lock.append("存在负的购电量")
-    if convention == "main" and (rec.x - rec.g0).min() < -tol:
+    if convention == "norefund" and (rec.x - rec.g0).min() < -tol:
         lock.append(f"主口径下出现下调 {(rec.x - rec.g0).min():.3e} kWh")
 
     # 4. 费用核对：按定义独立复算
     cp = float(np.sum(price * rec.g0))
-    if convention == "main":
+    if convention == "norefund":
         ca = float(np.sum(COEF_UP * price * np.maximum(rec.x - rec.g0, 0.0)))
     else:
         ca = float(np.sum(COEF_UP * price * np.maximum(rec.x - rec.g0, 0.0)
@@ -891,7 +956,7 @@ def validate_day3(rec: DayRecord3, price: np.ndarray,
 
 
 def validation_metrics3(recs: list[DayRecord3], price: np.ndarray,
-                        convention: str = "main") -> dict:
+                        convention: str = "norefund") -> dict:
     """汇总七项校验的**数值**口径，供论文按实测值陈述。"""
     m = {"供需平衡最大残差_kWh": 0.0, "储电量越界最大量_kWh": 0.0,
          "充放电越限最大量_kWh": 0.0, "同时充放电时段数": 0,
@@ -932,7 +997,7 @@ def validation_metrics3(recs: list[DayRecord3], price: np.ndarray,
 
 
 def check_all3(recs: list[DayRecord3], price: np.ndarray,
-               convention: str = "main") -> dict[str, int]:
+               convention: str = "norefund") -> dict[str, int]:
     """返回七项检查中各项的**失败天数**。"""
     counts = {"信息可用性": 0, "时间转换": 0, "计划锁定": 0, "费用核对": 0,
               "储能与供电": 0, "状态衔接": 0, "结果一致性": 0}
@@ -1229,7 +1294,7 @@ def run_task(task: dict) -> dict:
     t = totals3(rep)
     out = {"tag": task["tag"], "S": task["S"], "total": t,
            "cal_rows": cal_rows, "records": rep if task["keep"] else None}
-    if task["convention"] == "main":
+    if task["convention"] == "norefund":
         out["failures"] = check_all3(rep, price)
         out["vmetrics"] = validation_metrics3(rep, price)
 
@@ -1324,12 +1389,12 @@ def main() -> None:
         cal_kwargs = {} if not args.no_cal else {
             "alphas": (None,), "rhos": (1.0,), "lams": (0.60,)}
         tasks = [{"tag": combo_name(S), "S": S, "use_new": True,
-                  "convention": "main", "cal": cal_kwargs,
+                  "convention": "norefund", "cal": cal_kwargs,
                   "core": CORE,
                   "keep": combo_name(S) == MAIN_TAG}
                  for S in all_combos()]
         tasks.append({"tag": CTRL_TAG, "S": tuple(ALL_S), "use_new": False,
-                      "convention": "main", "cal": cal_kwargs, "core": CORE,
+                      "convention": "norefund", "cal": cal_kwargs, "core": CORE,
                       "keep": False})
         tasks.append({"tag": REFUND_TAG, "S": tuple(ALL_S), "use_new": True,
                       "convention": "refund", "cal": cal_kwargs, "core": CORE,
@@ -1408,7 +1473,8 @@ def main() -> None:
             if h in S:
                 continue
             d = save(combo_name(S)) - save(combo_name(tuple(sorted(S + (h,)))))
-            print(f"   Δ_{h}({combo_name(S) or '∅'}) = {d/1e4:8.2f} 万元")
+            # '∅'（U+2205）不在 GBK 内，中文控制台重定向输出时会崩溃，改用汉字
+            print(f"   Δ_{h}({combo_name(S) or '空集'}) = {d/1e4:8.2f} 万元")
 
     ctrl = by_tag[CTRL_TAG]["total"]
     rf_tot = by_tag[REFUND_TAG]["total"]

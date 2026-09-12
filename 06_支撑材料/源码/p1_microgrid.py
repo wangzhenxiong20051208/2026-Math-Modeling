@@ -17,11 +17,18 @@ r"""
   * 只购电不售电；允许弃光；不额外添加外网购电功率上限。
   * E_0 = E_144 = 6000 kWh（日循环），储电量全程保持 1200-10800 kWh。
 
-模型层次：
-  1) LP   —— 连续松弛，给出最优费用下界；
-  2) MILP —— 加入二元变量 z_t 强制充放电互斥，作为完整主模型。
-     若 LP 最优解本身不含同时充放电，则它已是 MILP 的最优解，该结论由
+模型层次（三个口径，互斥约束的处理方式不同，费用下界依次不降）：
+  1) LP-1 结构松弛 —— 直接删去 z_t 与 288 条互斥约束，得到最松的下界；
+  2) LP-2 标准 LP 松弛 —— 保留 z_t 与 288 条互斥约束，仅令 0 <= z_t <= 1
+     （即标准分支定界意义下的 LP 松弛）。由于 c_t <= M z_t 与
+     d_t <= M(1-z_t) 联立等价于 c_t + d_t <= M，LP-2 比 LP-1 多一层约束，
+     故 LP-1 费用 <= LP-2 费用，两者都是 MILP 的合法下界；
+  3) MILP —— z_t 取 0/1，强制充放电互斥，作为完整主模型。
+     若 LP-2 最优解本身不含同时充放电，则它已是 MILP 的最优解，该结论由
      本脚本自动判定并输出，不依赖"电价为正"这一先验假设。
+  论文若表述为"令 0<=z_t<=1 的 LP 松弛"，对应的是 LP-2；若表述为
+  "去掉 z_t 的 LP 松弛"，对应的是 LP-1。两者数值均在 p1_results.json 的
+  milp_check 字段中给出。
 --------------------------------------------------------------------------
 """
 
@@ -127,6 +134,9 @@ class Variant:
     e0: float = E_INIT            # 日初储电量
     free_e0: bool = False         # True 则日初自由，仅要求 E0 == E144
     binary: bool = False          # True 则启用二元变量强制充放电互斥（MILP）
+    relax_mutex: bool = False     # True 则保留互斥约束但令 z 连续（0<=z<=1），
+                                  # 即标准 LP 松弛；与 binary 同为 False 时
+                                  # 直接删去 z 与互斥约束（结构松弛）
     block_hours: int = 0          # >0 则充放电按该小时数的粗时段恒定决策
 
     def label(self) -> str:
@@ -135,10 +145,10 @@ class Variant:
 
 @dataclass
 class Solution:
-    g: np.ndarray    # 购电功率 kW
-    c: np.ndarray    # 充电功率 kW
-    d: np.ndarray    # 放电功率 kW
-    s: np.ndarray    # 弃光功率 kW
+    g: np.ndarray    # 购电量 kWh
+    c: np.ndarray    # 充电量 kWh
+    d: np.ndarray    # 放电量 kWh
+    s: np.ndarray    # 弃光量 kWh
     E: np.ndarray    # 各时段末储电量 kWh（E[i] 为第 i 时段末）
     E0: float        # 0:00 储电量 kWh
     obj: float       # 全天购电费 元
@@ -152,11 +162,17 @@ class Solution:
 def solve(df: pd.DataFrame, var: Variant) -> Solution:
     """装配并求解问题一的 LP / MILP。"""
     price = df["电价"].to_numpy(float)                  # 元/kWh
-    load = df["小区负载"].to_numpy(float)                # kW
-    pv = df["光伏发电预测功率"].to_numpy(float)           # kW
+    load = df["小区负载"].to_numpy(float)                # 负载功率 kW
+    pv = df["光伏发电预测功率"].to_numpy(float)           # 光伏功率 kW
+    # 决策变量一律取**电量**口径（kWh），与论文一致：输入的功率先乘 Δt。
+    load_e = load * TAU                                 # 负载电量 kWh
+    pv_e = pv * TAU                                     # 光伏电量 kWh
 
     ec, ed = var.eta_charge, var.eta_discharge
-    nz = N if var.binary else 0
+    # z_t 与互斥约束一体存废：binary 取 0/1；relax_mutex 保留约束但 z 连续；
+    # 两者皆否（纯结构松弛）则整体删去，变量维数降为 5N。
+    has_mutex = var.binary or var.relax_mutex
+    nz = N if has_mutex else 0
 
     # 变量分块： [g | c | d | s | E | z]
     iG, iC, iD, iS, iE, iZ = 0, N, 2 * N, 3 * N, 4 * N, 5 * N
@@ -165,9 +181,9 @@ def solve(df: pd.DataFrame, var: Variant) -> Solution:
     def blk(start: int) -> slice:
         return slice(start, start + N)
 
-    # ---- 目标：min Σ p_t g_t Δt （g 为功率，乘 Δt 得电量）
+    # ---- 目标：min Σ p_t g_t （g 已是电量 kWh，无需再乘 Δt）
     cvec = np.zeros(nvar)
-    cvec[blk(iG)] = price * TAU
+    cvec[blk(iG)] = price
 
     # ---- 等式约束
     eq_rows, eq_cols, eq_vals, eq_rhs = [], [], [], []
@@ -179,21 +195,22 @@ def solve(df: pd.DataFrame, var: Variant) -> Solution:
             eq_vals.append(val)
         eq_rhs.append(rhs)
 
-    # (1) 供需平衡（等式 + 显式弃光）：
-    #     g_t + (pv_t - s_t) + d_t = load_t + c_t
-    #  => g_t + d_t - c_t - s_t = load_t - pv_t
+    # (1) 供需平衡（等式 + 显式弃光），全部为电量 kWh：
+    #     g_t + (v_t - s_t) + d_t = l_t + c_t
+    #  => g_t + d_t - c_t - s_t = l_t - v_t
     for i in range(N):
         add_eq(i, [(iG + i, 1.0), (iD + i, 1.0), (iC + i, -1.0), (iS + i, -1.0)],
-               load[i] - pv[i])
+               load_e[i] - pv_e[i])
 
-    # (2) 储能状态递推：E_t = E_{t-1} + eta_c*c_t*Δt - d_t*Δt/eta_d
+    # (2) 储能状态递推（电量口径，系数即效率本身）：
+    #     E_t = E_{t-1} + eta_c*c_t - d_t/eta_d
     for i in range(N):
         row = N + i
         coeffs = [(iE + i, 1.0)]
         if i > 0:
             coeffs.append((iE + i - 1, -1.0))
-        coeffs.append((iC + i, -ec * TAU))
-        coeffs.append((iD + i, TAU / ed))
+        coeffs.append((iC + i, -ec))
+        coeffs.append((iD + i, 1.0 / ed))
         if i == 0 and var.free_e0:
             coeffs.append((nvar, -1.0))     # 追加变量 E0
         add_eq(row, coeffs, var.e0 if i == 0 and not var.free_e0 else 0.0)
@@ -222,20 +239,24 @@ def solve(df: pd.DataFrame, var: Variant) -> Solution:
 
     constraints = [LinearConstraint(A_eq, b_eq, b_eq)]
 
-    # ---- 充放电互斥（仅 MILP）：c_t <= P_max*z_t, d_t <= P_max*(1-z_t)
-    if var.binary:
+    # ---- 充放电互斥（MILP 与标准 LP 松弛均保留），大 M 取电量上界
+    #      M = P_max*Δt = 2500/3 kWh：
+    #      c_t <= M*z_t,  d_t <= M*(1-z_t)
+    #      z 取 0/1 时即完整模型；令 0<=z<=1 时即标准 LP 松弛（等价于
+    #      c_t + d_t <= M 这一对耦约束）。
+    if has_mutex:
         ub_rows, ub_cols, ub_vals, ub_rhs = [], [], [], []
         for i in range(N):
-            # c_i - P_max*z_i <= 0
+            # c_i - M*z_i <= 0
             ub_rows += [2 * i, 2 * i]
             ub_cols += [iC + i, iZ + i]
-            ub_vals += [1.0, -P_MAX]
+            ub_vals += [1.0, -M_ENERGY]
             ub_rhs.append(0.0)
-            # d_i + P_max*z_i <= P_max
+            # d_i + M*z_i <= M
             ub_rows += [2 * i + 1, 2 * i + 1]
             ub_cols += [iD + i, iZ + i]
-            ub_vals += [1.0, P_MAX]
-            ub_rhs.append(P_MAX)
+            ub_vals += [1.0, M_ENERGY]
+            ub_rhs.append(M_ENERGY)
         A_ub = csr_matrix((ub_vals, (ub_rows, ub_cols)),
                           shape=(2 * N, nvar + n_extra))
         constraints.append(LinearConstraint(A_ub, -np.inf, np.array(ub_rhs)))
@@ -247,15 +268,15 @@ def solve(df: pd.DataFrame, var: Variant) -> Solution:
         np.zeros(N),            # d >= 0
         np.zeros(N),            # s >= 0
         np.full(N, E_MIN),      # E 下界
-        np.zeros(nz),           # z
+        np.zeros(nz),           # z >= 0
     ])
     ub = np.concatenate([
         np.full(N, np.inf),     # g 无上限：5000 kW 限制的是储能而非外网购电
-        np.full(N, P_MAX),      # c
-        np.full(N, P_MAX),      # d
-        pv.copy(),              # s <= 光伏可用功率（弃光不超过发电）
+        np.full(N, M_ENERGY),   # c <= 单时段最大充电量
+        np.full(N, M_ENERGY),   # d <= 单时段最大放电量
+        pv_e.copy(),            # s <= 光伏可用电量（弃光不超过发电）
         np.full(N, E_MAX),      # E 上界
-        np.ones(nz),            # z
+        np.ones(nz),            # z <= 1（relax_mutex 时即为 0<=z<=1 的松弛）
     ])
     if var.free_e0:
         lb = np.concatenate([lb, [E_MIN]])
@@ -288,22 +309,22 @@ def validate(sol: Solution, df: pd.DataFrame, var: Variant, tol: float = 1e-6) -
     pv = df["光伏发电预测功率"].to_numpy(float)
     ec, ed = var.eta_charge, var.eta_discharge
 
-    # 1) 逐段供需平衡（等式 + 显式弃光）
-    resid = sol.g + (pv - sol.s) + sol.d - load - sol.c
-    if np.abs(resid).max() > tol * max(1.0, load.max()):
-        problems.append(f"供需平衡残差过大：{np.abs(resid).max():.3e} kW")
+    # 1) 逐段供需平衡（等式 + 显式弃光），电量口径
+    resid = sol.g + (pv * TAU - sol.s) + sol.d - load * TAU - sol.c
+    if np.abs(resid).max() > tol * max(1.0, (load * TAU).max()):
+        problems.append(f"供需平衡残差过大：{np.abs(resid).max():.3e} kWh")
 
     # 2) 弃光量非负且不超过光伏出力
     if sol.s.min() < -tol:
-        problems.append(f"弃光量为负：{sol.s.min():.6f} kW")
-    if (sol.s - pv).max() > tol:
+        problems.append(f"弃光量为负：{sol.s.min():.6f} kWh")
+    if (sol.s - pv * TAU).max() > tol:
         problems.append("弃光量超过光伏可用出力")
 
-    # 3) 充放电功率限值
-    if sol.c.max() > P_MAX + tol:
-        problems.append(f"充电功率越限 {sol.c.max():.4f} > {P_MAX}")
-    if sol.d.max() > P_MAX + tol:
-        problems.append(f"放电功率越限 {sol.d.max():.4f} > {P_MAX}")
+    # 3) 充放电量限值（单时段不超过 M = P_max*Δt）
+    if sol.c.max() > M_ENERGY + tol:
+        problems.append(f"充电量越限 {sol.c.max():.4f} > {M_ENERGY}")
+    if sol.d.max() > M_ENERGY + tol:
+        problems.append(f"放电量越限 {sol.d.max():.4f} > {M_ENERGY}")
 
     # 4) 储电量上下界（序列含 E0，共 145 个状态点）
     Eseq = np.concatenate([[sol.E0], sol.E])
@@ -315,7 +336,7 @@ def validate(sol: Solution, df: pd.DataFrame, var: Variant, tol: float = 1e-6) -
     # 5) 状态递推自洽
     Erec = [sol.E0]
     for i in range(N):
-        Erec.append(Erec[-1] + ec * sol.c[i] * TAU - sol.d[i] * TAU / ed)
+        Erec.append(Erec[-1] + ec * sol.c[i] - sol.d[i] / ed)
     err = np.abs(np.array(Erec[1:]) - sol.E).max()
     if err > tol:
         problems.append(f"储电量递推不自洽，最大偏差 {err:.6e} kWh")
@@ -325,18 +346,21 @@ def validate(sol: Solution, df: pd.DataFrame, var: Variant, tol: float = 1e-6) -
         problems.append(f"E144 != E0：{sol.E0:.4f} vs {sol.E[-1]:.4f}")
 
     # 7) 充放电互斥（唯一一条题目未直接给出、需自证的物理约束）
-    both = (sol.c > tol) & (sol.d > tol)
-    if both.any():
-        problems.append(f"存在 {int(both.sum())} 个时段同时充放电")
+    #    仅当该口径确实施加了互斥约束时才作为"问题"报出；对 LP 松弛而言，
+    #    同时充放电是松弛的固有性质而非违规，其时段数由调用方单独统计。
+    if var.binary:
+        both = (sol.c > tol) & (sol.d > tol)
+        if both.any():
+            problems.append(f"存在 {int(both.sum())} 个时段同时充放电")
 
     # 8) 日循环推论：Σd = η_c·η_d·Σc
-    lhs = float((sol.d * TAU).sum())
-    rhs = float(ec * ed * (sol.c * TAU).sum())
+    lhs = float(sol.d.sum())
+    rhs = float(ec * ed * sol.c.sum())
     if abs(lhs - rhs) > tol * max(1.0, lhs):
         problems.append(f"Σd != η_c·η_d·Σc：{lhs:.6f} vs {rhs:.6f}")
 
     # 9) 目标函数复算
-    obj2 = float(np.sum(price * sol.g * TAU))
+    obj2 = float(np.sum(price * sol.g))
     if abs(obj2 - sol.obj) > tol * max(1.0, abs(sol.obj)):
         problems.append(f"目标函数复算不符：{sol.obj:.6f} vs {obj2:.6f}")
 
@@ -347,10 +371,10 @@ def validate(sol: Solution, df: pd.DataFrame, var: Variant, tol: float = 1e-6) -
 def summarize(sol: Solution, df: pd.DataFrame) -> dict:
     """汇总论文表 1 / 表 2 及各类统计量。"""
     price = df["电价"].to_numpy(float)
-    g_kwh = sol.g * TAU
-    c_kwh = sol.c * TAU
-    d_kwh = sol.d * TAU
-    s_kwh = sol.s * TAU
+    g_kwh = sol.g
+    c_kwh = sol.c
+    d_kwh = sol.d
+    s_kwh = sol.s
 
     want = ["10:00-10:10", "12:00-12:10", "14:00-14:10",
             "16:00-16:10", "18:00-18:10", "20:00-20:10"]
@@ -393,13 +417,13 @@ def detail_frame(sol: Solution, df: pd.DataFrame) -> pd.DataFrame:
         "电价_元每kWh": df["电价"].to_numpy(float),
         "负载电量_kWh": df["小区负载"].to_numpy(float) * TAU,
         "光伏电量_kWh": df["光伏发电预测功率"].to_numpy(float) * TAU,
-        "购电量_kWh": sol.g * TAU,
-        "充电量_kWh": sol.c * TAU,
-        "放电量_kWh": sol.d * TAU,
-        "弃光量_kWh": sol.s * TAU,
+        "购电量_kWh": sol.g,
+        "充电量_kWh": sol.c,
+        "放电量_kWh": sol.d,
+        "弃光量_kWh": sol.s,
         "期初储电量_kWh": E_prev,
         "期末储电量_kWh": sol.E,
-        "时段费用_元": df["电价"].to_numpy(float) * sol.g * TAU,
+        "时段费用_元": df["电价"].to_numpy(float) * sol.g,
     })
 
 
@@ -434,9 +458,9 @@ def write_result1(sol: Solution, df: pd.DataFrame, path: Path) -> None:
     '0:00-0:10' … '23:50-0:00+1'；行序与模板一一对应，数值不会错位。
     原模板文件保持不动。
     """
-    g_kwh = sol.g * TAU
-    c_kwh = sol.c * TAU
-    d_kwh = sol.d * TAU
+    g_kwh = sol.g
+    c_kwh = sol.c
+    d_kwh = sol.d
 
     wb = openpyxl.load_workbook(path) if path.exists() else openpyxl.Workbook()
 
@@ -482,19 +506,32 @@ def main() -> None:
           f"光伏 {pv.min():.2f} ~ {pv.max():.2f} kW")
     print(f"  时段标签校验：严格递增且恰为 {{10,20,...,1440}} 分钟 —— 通过")
 
-    # ---------- 第 1 步：LP（连续松弛，给出费用下界）
-    lp_var = Variant(name="LP（连续松弛，费用下界）")
-    lp_sol = solve(df, lp_var)
-    lp_problems = validate(lp_sol, df, lp_var)
-    lp_both = int(((lp_sol.c > 1e-9) & (lp_sol.d > 1e-9)).sum())
+    # ---------- 第 1 步：LP-1 结构松弛（删去 z 与 288 条互斥约束）
+    lp1_var = Variant(name="LP-1 结构松弛（删去 z_t 与互斥约束）")
+    lp1_sol = solve(df, lp1_var)
+    lp1_problems = validate(lp1_sol, df, lp1_var)
+    lp1_both = int(((lp1_sol.c > 1e-9) & (lp1_sol.d > 1e-9)).sum())
     print("-" * 78)
-    print(f"LP   ：最优费用 {lp_sol.obj:,.4f} 元   "
-          f"校验{'通过' if not lp_problems else '存在问题'}")
-    for p in lp_problems:
+    print(f"LP-1 ：最优费用 {lp1_sol.obj:,.4f} 元   "
+          f"校验{'通过' if not lp1_problems else '存在问题'}")
+    for p in lp1_problems:
         print("   !!", p)
-    print(f"       同时充放电的时段数 = {lp_both}")
+    print(f"       同时充放电的时段数 = {lp1_both}")
 
-    # ---------- 第 2 步：MILP（含二元变量，强制充放电互斥）
+    # ---------- 第 2 步：LP-2 标准 LP 松弛（保留 z 与 288 条互斥约束，
+    #            仅令 0 <= z_t <= 1）—— 论文所述"令 0<=z<=1 的松弛"即此
+    lp2_var = Variant(name="LP-2 标准 LP 松弛（保留互斥约束，0<=z_t<=1）",
+                      relax_mutex=True)
+    lp2_sol = solve(df, lp2_var)
+    lp2_problems = validate(lp2_sol, df, lp2_var)
+    lp2_both = int(((lp2_sol.c > 1e-9) & (lp2_sol.d > 1e-9)).sum())
+    print(f"LP-2 ：最优费用 {lp2_sol.obj:,.4f} 元   "
+          f"校验{'通过' if not lp2_problems else '存在问题'}")
+    for p in lp2_problems:
+        print("   !!", p)
+    print(f"       同时充放电的时段数 = {lp2_both}")
+
+    # ---------- 第 3 步：MILP（含二元变量，强制充放电互斥）
     milp_var = Variant(name="MILP（含充放电互斥约束，完整主模型）", binary=True)
     milp_sol = solve(df, milp_var)
     milp_problems = validate(milp_sol, df, milp_var)
@@ -504,18 +541,45 @@ def main() -> None:
     for p in milp_problems:
         print("   !!", p)
 
-    # ---------- 第 3 步：互斥性判定
-    # 若 LP 最优解本身不含同时充放电，则它满足完整模型，即为 MILP 最优解。
-    gap = abs(milp_sol.obj - lp_sol.obj)
+    # ---------- 第 4 步：下界次序与互斥性判定
+    # 理论次序 LP-1 <= LP-2 <= MILP，先自检该次序是否成立。
+    tol_obj = 1e-6 * max(1.0, abs(milp_sol.obj))
+    order_ok = (lp1_sol.obj <= lp2_sol.obj + tol_obj
+                and lp2_sol.obj <= milp_sol.obj + tol_obj)
     print("-" * 78)
-    if lp_both == 0 and gap <= 1e-6 * max(1.0, abs(milp_sol.obj)):
-        print("结论：LP 最优解不含同时充放电，且 LP 与 MILP 目标值一致")
-        print("      => LP 松弛的最优解已是完整模型（MILP）的最优解，")
+    print(f"下界次序 LP-1 <= LP-2 <= MILP："
+          f"{lp1_sol.obj:,.6f} <= {lp2_sol.obj:,.6f} <= {milp_sol.obj:,.6f}  "
+          f"—— {'成立' if order_ok else '不成立（异常）'}")
+    if not order_ok:
+        raise RuntimeError("LP 松弛与 MILP 的费用下界次序异常，请检查模型装配")
+
+    # 若 LP-2 最优解本身不含同时充放电，则它满足完整模型，即为 MILP 最优解。
+    gap2 = abs(milp_sol.obj - lp2_sol.obj)
+    if lp2_both == 0 and gap2 <= tol_obj:
+        print("结论：LP-2 最优解不含同时充放电，且与 MILP 目标值一致")
+        print("      => 标准 LP 松弛的最优解已是完整模型（MILP）的最优解，")
         print("         无需依赖『电价为正』这一先验假设。")
     else:
-        print(f"结论：需采用 MILP 结果。LP 同时充放电时段数={lp_both}，"
-              f"两者费用差 {gap:.6f} 元")
-    sol = milp_sol if gap > 1e-6 * max(1.0, abs(milp_sol.obj)) else lp_sol
+        print(f"结论：需采用 MILP 结果。LP-2 同时充放电时段数={lp2_both}，"
+              f"两者费用差 {gap2:.6f} 元")
+    # 主模型结果一律取 MILP 解，而不是"gap 为 0 时改用松弛解"。
+    # 原因：LP 与 MILP 目标值相同时仍可能存在多个最优解。本数据下 LP-1 的
+    # 最优解与 MILP 最优解在 23:10 / 23:30 两个时段相差一个 333.33 kWh 的
+    # 充电块（费用完全相同，属多重最优）。若用松弛解的某个最优解冒充主模型
+    # 结果，表面上费用一致，但逐时段计划会与"完整主模型"的表述不符。
+    sol = milp_sol
+
+    # 统计各松弛解与 MILP 解的逐时段差异，供论文交代多重最优现象。
+    # 费用相同但逐时段计划不同即属多重最优，须说明所报口径。
+    def n_diff_periods(a: Solution, b: Solution) -> int:
+        return int(((np.abs(a.c - b.c) > 1e-6) | (np.abs(a.d - b.d) > 1e-6)).sum())
+
+    n_diff_1 = n_diff_periods(lp1_sol, milp_sol)
+    n_diff_2 = n_diff_periods(lp2_sol, milp_sol)
+    if n_diff_1 or n_diff_2:
+        print(f"提示：与 MILP 解相比，LP-1 有 {n_diff_1} 个时段、LP-2 有 "
+              f"{n_diff_2} 个时段取值不同（费用相同，属多重最优）；"
+              f"报告一律采用 MILP 解。")
 
     # ---------- 主模型结果
     var = Variant(name="主模型：LP⊂MILP，η充=η放=0.90，E0=6000")
@@ -609,9 +673,24 @@ def main() -> None:
                       f"放/充 {row['放电量_kWh'] / row['充电量_kWh']:.4f}")
 
     payload["milp_check"] = {
-        "LP费用": lp_sol.obj, "MILP费用": milp_sol.obj,
-        "LP同时充放电时段数": lp_both, "费用差": gap,
-        "LP解即MILP最优": bool(lp_both == 0 and gap <= 1e-6 * max(1.0, abs(milp_sol.obj))),
+        # LP-1：删去 z_t 与 288 条互斥约束的结构松弛
+        "LP1结构松弛费用": lp1_sol.obj,
+        "LP1同时充放电时段数": lp1_both,
+        # LP-2：保留 z_t 与 288 条互斥约束、令 0<=z_t<=1 的标准 LP 松弛
+        "LP2标准松弛费用": lp2_sol.obj,
+        "LP2同时充放电时段数": lp2_both,
+        "MILP费用": milp_sol.obj,
+        "LP2与MILP费用差": gap2,
+        "下界次序LP1不大于LP2不大于MILP": bool(order_ok),
+        "LP2解即MILP最优": bool(lp2_both == 0 and gap2 <= tol_obj),
+        # 多重最优：松弛解与 MILP 解可能费用相同但逐时段取值不同。
+        # 本数据下 LP-1 与 MILP 不同（一个 333.33 kWh 充电块在 23:10/23:30
+        # 之间平移），LP-2 与 MILP 完全相同。论文引用逐时段计划须说明
+        # 报告口径为 MILP 解。
+        "LP1与MILP解不同的时段数": n_diff_1,
+        "LP2与MILP解不同的时段数": n_diff_2,
+        "报告口径": "MILP（完整主模型）解",
+        "MILP的mip_gap": milp_sol.mip_gap,
     }
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
