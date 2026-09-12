@@ -26,7 +26,11 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import p3_microgrid as m  # noqa: E402
 from p1_microgrid import N, TAU, interval_label  # noqa: E402
-from p2_microgrid import N_DAY, REPORT_START, REPORT_END  # noqa: E402
+from p2_microgrid import (N_DAY, REPORT_END, REPORT_START,  # noqa: E402
+                          load_attach2)
+# 附件 3 的载入与版本索引在滚动脚本里（p3_microgrid 只负责单版本求解，
+# 不导出 load_attach3）。此处必须从滚动脚本取，否则 AttributeError。
+from p3_rolling_microgrid import load_attach3  # noqa: E402
 
 OUT = m.OUT_DIR / "p3_alignment_scan.json"
 RELEASE_HOURS = (0, 6, 12, 18)
@@ -55,8 +59,8 @@ def _step(A: np.ndarray, minutes: float) -> float:
 
 
 def scan() -> dict:
-    LOAD, PV, dates = m.load_attach2()
-    fp = m.load_attach3()
+    LOAD, PV, dates = load_attach2()
+    fp = load_attach3(PV)
 
     # load_attach2 返回的 (LOAD, PV) 单位已经是 kW（求解器用 PV * TAU 换算成
     # 十分钟电量），故这里直接就是十分钟平均功率，不要再除 TAU。

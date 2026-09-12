@@ -408,7 +408,7 @@ def is_locked(path):
 
 if is_locked(OUTPUT_FILE):
     OUTPUT_FILE = os.path.join(OUTPUT_DIR, 'result2_新.xlsx')
-    print(f"  ⚠ result2.xlsx 被占用（请关闭Excel），改存为: {OUTPUT_FILE}")
+    print(f"  [警告] result2.xlsx 被占用（请关闭Excel），改存为: {OUTPUT_FILE}")
 
 shutil.copy(TEMPLATE_FILE, OUTPUT_FILE)
 wb = load_workbook(OUTPUT_FILE)

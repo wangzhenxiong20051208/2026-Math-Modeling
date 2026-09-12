@@ -819,11 +819,38 @@ def run_strategy(sim: Simulator, cal: CalConfig,
     return records, cal_rows
 
 
-def strategy_totals(records: list[DayRecord], lo: int, hi: int) -> dict:
-    """按正式区间汇总某个策略的费用与电量。"""
+def reference_price(price) -> float:
+    """库存折算参考电价：全天 144 段电价的算术平均。
+
+    各脚本（主运行、λ 消融、α 扫描）都要把库存变动折成费用，折算单价必须
+    是**同一个数**，否则汇总表之间不可比。故抽成函数由各调用点共用，
+    不再各自写一遍 np.mean。
+    """
+    return float(np.mean(np.asarray(price, dtype=float)))
+
+
+def strategy_totals(records: list[DayRecord], lo: int, hi: int,
+                    p_ref: float) -> dict:
+    """按正式区间汇总某个策略的费用与电量，并给出与储电量水平无关的可比费用。
+
+    **为什么必须同时报期初与期末储电量**：各策略都从 2025-01-01 的 6000 kWh
+    出发，但 1 月预热期内各自标定出不同参数、走出不同轨迹，因此进入评价区间
+    （2025-02-01）时电池里的**库存电量并不相同**——主模型 2287.68 kWh、
+    预测均值策略 7097.30 kWh、无储能 6000.0 kWh。只比期末值会把"预热期攒下的
+    已付费库存"误记成策略优势：预测均值策略起点比主模型多揣 4809.6 kWh。
+
+    **可比费用的口径**：区间内净动用的库存电量 (E_期初 - E_期末) 是区间内真正
+    被消耗掉的、此前已付费的电量，按参考电价 p_ref 折算回费用加回去；
+    期末比期初多出的部分同理作为贷记。于是
+        可比费用 = 合计购电费 + (E_期初 - E_期末) * p_ref
+    与策略在区间起点的储电量水平无关，可用于横向比较。
+    """
     rep = [r for r in records if lo <= r.n < hi]
     cp = sum(r.exec.cost_plan for r in rep)
     ce = sum(r.exec.cost_emg for r in rep)
+    e_start = float(rep[0].exec.E0)
+    e_end = float(rep[-1].exec.E_end)
+    draw = e_start - e_end                 # 净动用库存 kWh，正 = 消耗了库存
     return {
         "天数": len(rep),
         "计划购电量_kWh": sum(float(r.exec.g.sum()) for r in rep),
@@ -832,8 +859,13 @@ def strategy_totals(records: list[DayRecord], lo: int, hi: int) -> dict:
         "计划购电费_元": cp,
         "紧急购电费_元": ce,
         "合计购电费_元": cp + ce,
-        "期末储电量_kWh": float(rep[-1].exec.E_end),
-        "期初储电量_kWh": float(rep[0].exec.E0),
+        "期初储电量_kWh": e_start,
+        "期末储电量_kWh": e_end,
+        "储电量净变化_kWh": e_end - e_start,
+        "净动用库存_kWh": draw,
+        "参考电价_元每kWh": p_ref,
+        "库存折算费用_元": draw * p_ref,
+        "可比费用_元": cp + ce + draw * p_ref,
     }
 
 
@@ -1149,11 +1181,12 @@ def main() -> None:
     ap.add_argument("--legacy-warmup", action="store_true",
                     help="退回旧的预热期行为（预测器写死、预热参数硬编码 α=0.80/ρ=1.0/λ=0.60），"
                          "仅用于复现历史数字")
-    ap.add_argument("--core", default="hybrid", choices=["hybrid", "jia"],
-                    help="问题二内核。hybrid（默认）=本文方案：预测器与预热参数在 1 月上"
-                         "离线选出，正式区间滚动标定 (α,ρ,λ)；"
-                         "jia=对照实现 origin/q2-jia 最终版：预测器写死、1 月联合标定 "
-                         "(α,ρ,λ)、λ 整年冻结、滚动只重选 (α,ρ)")
+    ap.add_argument("--core", default="jia", choices=["jia", "hybrid"],
+                    help="问题二内核。jia（默认，**论文正文所用**）=预测器写死、1 月联合"
+                         "标定 5×6×6=180 组 (α,ρ,λ)、λ 整年冻结、此后每 42 天在 "
+                         "5×6=30 组上重选 (α,ρ)——见 main.tex 第 1052/1053/1069/1187/2230 行；"
+                         "hybrid=本仓早期内核（预测器与预热参数在 1 月离线选出、正式区间"
+                         "滚动标定 (α,ρ,λ)），**不对应论文任何数字**，仅供对照")
     args = ap.parse_args()
 
     t_start = time.time()
@@ -1180,7 +1213,8 @@ def main() -> None:
     elif args.core == "jia":
         fo = Forecaster(LOAD, PV, JIA_LOAD_FORECAST, JIA_PV_FORECAST)
         eps = build_error_table(LOAD, PV, fo)
-        print("  【内核 jia】对照实现 origin/q2-jia 最终版（solve2_final.py）的配置")
+        print("  【内核 jia】**论文正文所用**：1 月联合标定后 λ 整年冻结，"
+              "此后每 42 天在 (α,ρ) 上重选")
         print(f"    预测器（写死）：{fo.fp_load.label()}；{fo.fp_pv.label()}")
         print(f"    1 月联合标定：{len(JIA_ALPHAS) * len(JIA_RHOS) * len(JIA_LAMS)} 组 "
               f"(α,ρ,λ)，min_samples={JIA_MIN_SAMPLES}，第 0 天口径 plan")
@@ -1189,7 +1223,8 @@ def main() -> None:
             LOAD, PV, price, dates, jia_warmup_config(args.rule))
         print(f"    用时 {time.time() - t_w:.1f}s")
     else:
-        print("  【1 月离线选参】预测器超参数与预热期运行参数（只用 1 月数据）")
+        print("  【内核 hybrid】本仓早期内核，**不对应论文任何数字**，仅供对照："
+              "预测器与预热参数在 1 月离线选出，正式区间滚动标定 (α,ρ,λ)")
         t_w = time.time()
         fo, eps, warmup_rp, warmup_rows = select_warmup(
             LOAD, PV, price, dates, WarmupConfig(rule=args.rule))
@@ -1379,11 +1414,16 @@ def main() -> None:
     print("对照策略（同一预测器与实时执行规则，各自单独标定，同一评价区间）")
     cal_start = N_DAY if args.no_cal else REPORT_START
 
+    # 库存折算用的参考电价：全天 144 段电价的算术平均。取常数而不取各策略
+    # 自身的成交均价，是为了避免"用被评价对象自己的价格去评价它"这一循环。
+    p_ref = reference_price(price)
+    print(f"  库存折算参考电价 {p_ref:.4f} 元/kWh（全天 144 段电价算术平均）")
+
     strat: dict[str, dict] = {}
     strat_recs: dict[str, list[DayRecord]] = {}
 
     k_main = "本文风险修正策略（主模型）"
-    strat[k_main] = strategy_totals(records, REPORT_START, REPORT_END)
+    strat[k_main] = strategy_totals(records, REPORT_START, REPORT_END, p_ref)
     strat_recs[k_main] = records
 
     if not args.no_cal:
@@ -1391,7 +1431,7 @@ def main() -> None:
         recs_m, _ = run_strategy(sim, CalConfig(rule=args.rule, alphas=(None,),
                                                 start=cal_start), verbose=False)
         k_mean = "预测均值策略（不加分位风险余量）"
-        strat[k_mean] = strategy_totals(recs_m, REPORT_START, REPORT_END)
+        strat[k_mean] = strategy_totals(recs_m, REPORT_START, REPORT_END, p_ref)
         strat_recs[k_mean] = recs_m
 
         print("  (b) 无储能：同样提前计划、同样五倍补缺，α 照常标定")
@@ -1399,7 +1439,7 @@ def main() -> None:
                                                  allow_storage=False,
                                                  start=cal_start), verbose=False)
         k_ns = "无储能（同样提前计划并五倍补缺）"
-        strat[k_ns] = strategy_totals(recs_ns, REPORT_START, REPORT_END)
+        strat[k_ns] = strategy_totals(recs_ns, REPORT_START, REPORT_END, p_ref)
         strat_recs[k_ns] = recs_ns
 
     # (c) 完全预知当天实际净负荷的理想对照：同模型、同参数、同一天初储电量
@@ -1412,6 +1452,10 @@ def main() -> None:
     ideal = 0.0
     ideal_daily: list[float] = []
     ideal_Eend: list[float] = []
+    # 该对照没有执行层：计划即实际。故计划购电量/弃电量直接由每日 MILP 解读出，
+    # 与 计划购电费 = Σ p·g 同源（g、wb 单位均为 kWh），不再留 NaN。
+    ideal_g: list[float] = []
+    ideal_w: list[float] = []
     rp_ideal = RiskParams(alpha=None, rho=params.rho, lam=params.lam)
     for rec in rep:
         plan = solve_dayahead(rec.l_act - rec.v_act, rec.exec.E0, price, rp_ideal)
@@ -1419,12 +1463,23 @@ def main() -> None:
         ideal += c_day
         ideal_daily.append(c_day)
         ideal_Eend.append(float(plan.Ebar[-1]))
+        ideal_g.append(float(np.sum(plan.g)))
+        ideal_w.append(float(np.sum(plan.wb)))
     k_id = "事后理想（完全预知当天净负荷）"
+    # 该对照每天从主策略的实际日初储电量出发，故其区间期初储电量与主策略相同；
+    # 区间期末取最后一个理想日的计划日末储电量。两值均如实报出，不再留 NaN。
+    id_e0 = float(rep[0].exec.E0)
+    id_e1 = float(ideal_Eend[-1])
+    id_draw = id_e0 - id_e1
     strat[k_id] = {
-        "天数": len(rep), "计划购电量_kWh": float("nan"),
-        "紧急购电量_kWh": 0.0, "弃电量_kWh": float("nan"),
+        "天数": len(rep), "计划购电量_kWh": float(sum(ideal_g)),
+        "紧急购电量_kWh": 0.0, "弃电量_kWh": float(sum(ideal_w)),
         "计划购电费_元": ideal, "紧急购电费_元": 0.0, "合计购电费_元": ideal,
-        "期末储电量_kWh": float("nan"), "期初储电量_kWh": float("nan"),
+        "期初储电量_kWh": id_e0, "期末储电量_kWh": id_e1,
+        "储电量净变化_kWh": id_e1 - id_e0, "净动用库存_kWh": id_draw,
+        "参考电价_元每kWh": p_ref,
+        "库存折算费用_元": id_draw * p_ref,
+        "可比费用_元": ideal + id_draw * p_ref,
         "日末日均储电量_kWh": float(np.mean(ideal_Eend)),
         "日末储电量最小_kWh": float(np.min(ideal_Eend)),
         "日末储电量最大_kWh": float(np.max(ideal_Eend)),
@@ -1455,24 +1510,31 @@ def main() -> None:
             "cost_plan": ideal_daily,
             "cost_emg": [0.0] * len(rep_dates),
             "cost_total": ideal_daily,
-            "plan_kwh": [float("nan")] * len(rep_dates),
+            "plan_kwh": ideal_g,
             "emg_kwh": [0.0] * len(rep_dates),
-            "E_end": [float("nan")] * len(rep_dates),
+            # 该对照无执行层，E_end 即每日计划的日末参考储电量 Ē_144。
+            "E_end": ideal_Eend,
         }
 
 
-    hdr = f"  {'策略':<26}{'总费用/元':>14}{'计划费/元':>14}{'紧急费/元':>13}{'期末储电量/kWh':>16}"
-    print(hdr)
+    print(f"  {'策略':<26}{'总费用/元':>14}{'期初库存':>11}{'期末库存':>11}"
+          f"{'净动用':>10}{'可比费用/元':>14}")
     for k, v in strat.items():
-        print(f"  {k:<26}{v['合计购电费_元']:>14,.0f}{v['计划购电费_元']:>14,.0f}"
-              f"{v['紧急购电费_元']:>13,.0f}{v['期末储电量_kWh']:>16,.1f}")
+        print(f"  {k:<26}{v['合计购电费_元']:>14,.0f}"
+              f"{v['期初储电量_kWh']:>11,.1f}{v['期末储电量_kWh']:>11,.1f}"
+              f"{v['净动用库存_kWh']:>10,.1f}{v['可比费用_元']:>14,.0f}")
+    print("  注：可比费用 = 合计购电费 + 净动用库存 × 参考电价，已消除各策略"
+          "进入评价区间时储电量不同带来的影响。")
     if not args.no_cal:
-        b0 = strat["无储能（同样提前计划并五倍补缺）"]["合计购电费_元"]
-        b1 = strat["预测均值策略（不加分位风险余量）"]["合计购电费_元"]
-        print(f"  → 相对「无储能」节省 {b0 - (cp + ce):,.0f} 元 "
-              f"（{(b0 - (cp + ce)) / b0 * 100:.2f}%）；"
-              f"相对「预测均值」节省 {b1 - (cp + ce):,.0f} 元 "
-              f"（{(b1 - (cp + ce)) / b1 * 100:.2f}%）")
+        m_cmp = strat[k_main]["可比费用_元"]
+        for kb, short in ((("无储能（同样提前计划并五倍补缺）"), "无储能"),
+                          (("预测均值策略（不加分位风险余量）"), "预测均值")):
+            raw_b = strat[kb]["合计购电费_元"]
+            cmp_b = strat[kb]["可比费用_元"]
+            print(f"  → 相对「{short}」：按原费用节省 {raw_b - (cp + ce):>10,.0f} 元"
+                  f"（{(raw_b - (cp + ce)) / raw_b * 100:5.2f}%）；"
+                  f"按可比费用节省 {cmp_b - m_cmp:>10,.0f} 元"
+                  f"（{(cmp_b - m_cmp) / cmp_b * 100:5.2f}%）")
 
     if args.quick:
         print("（--quick 模式，不写出交付文件）")

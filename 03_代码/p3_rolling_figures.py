@@ -78,11 +78,12 @@ def panels():
 # ---------------------------------------------------------------- 图 1
 def fig1_versions() -> None:
     """图 1：四个发布版本对同一天的光伏预报，叠加该日实际光伏。"""
-    from p3_microgrid import load_attach3, forecast_energy_slots
+    # 附件 3 的载入与版本索引都在滚动脚本里；p3_microgrid 不导出这两个名字。
     from p2_microgrid import load_attach2 as _l2
+    from p3_rolling_microgrid import forecast_energy_slots, load_attach3
 
-    fp = load_attach3()
     LOAD, PV, dates = _l2()
+    fp = load_attach3(PV)
     idx = {d: i for i, d in enumerate(dates)}
     t = hours()
 

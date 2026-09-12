@@ -37,6 +37,7 @@ import numpy as np
 from p2_microgrid import (
     E_INIT, E_MAX, E_MIN, N, N_DAY, REPORT_END, REPORT_START, JIA_MIN_SAMPLES,
     CalConfig, Forecaster, JIA_LOAD_FORECAST, JIA_PV_FORECAST, RiskParams,
+    reference_price,
     Simulator, build_error_table, load_attach2, run_strategy, strategy_totals,
 )
 
@@ -64,11 +65,22 @@ def arm_stats(records, lo: int, hi: int, rho: float) -> dict:
     Ebar_end = np.array([r.Ebar[-1] for r in rep])
     E_end_daily = np.array([r.exec.E_end for r in rep])
 
-    # 执行层逐时段的时段初储电量
+    # 执行层逐时段的时段初储电量与实际盈余 b_t
     starts = np.concatenate([
         np.concatenate([[r.exec.E0], r.exec.E[:-1]]) for r in rep])
+    d_all = np.concatenate([r.exec.d for r in rep])
+    r_all = np.concatenate([r.exec.r for r in rep])
+    # b_t = 计划购电 + 实际光伏 − 实际负载，与 execute_day 内部一致
+    b_all = np.concatenate([r.exec.g + r.v_act - r.l_act for r in rep])
+    needs = b_all < -1e-9
+
     R = E_MIN + rho * (Ebar - E_MIN)
+    # 口径a：站在储备线下。E_{t-1} < R_t ⟹ head=0 ⟹ d_t=0 是恒等推论，
+    # 故该口径**必然**对应"未放电"，不能据此声称"因储备线而未能放电"——
+    # 其中多数时段根本不需要放电。
     below = starts < R - 1e-6
+    # 口径b：真的被卡住。既需要放电（b<0）又站在储备线下，缺口只能转紧急购电。
+    blocked = needs & (starts <= R + 1e-6)
 
     return {
         "天数": len(rep),
@@ -90,7 +102,12 @@ def arm_stats(records, lo: int, hi: int, rho: float) -> dict:
         "储备线": {
             "E_低于R_时段占比": float(below.mean()),
             "E_低于R_且未放电_时段占比": float(
-                (below & (np.concatenate([r.exec.d for r in rep]) <= 1e-9)).mean()),
+                (below & (d_all <= 1e-9)).mean()),
+            "需要放电_时段占比": float(needs.mean()),
+            "放电被结构性拒绝_时段占比": float(blocked.mean()),
+            "被拒时段紧急购电量_kWh": float(r_all[blocked].sum()),
+            "被拒占全部紧急购电比例": float(
+                r_all[blocked].sum() / max(1e-9, r_all.sum())),
             "日末E_均值_kWh": float(E_end_daily.mean()),
             "日末E_贴下限占比": float(
                 (np.abs(E_end_daily - E_MIN) <= EDGE_TOL).mean()),
@@ -206,7 +223,7 @@ def main() -> None:
             rp = RiskParams(alpha=alpha, rho=rho, lam=lam, window=28,
                             min_samples=JIA_MIN_SAMPLES)
             records, _ = run_strategy(sim, cal, warmup=rp, verbose=False)
-            full = strategy_totals(records, 0, N_DAY)
+            full = strategy_totals(records, 0, N_DAY, reference_price(price))
             rep = arm_stats(records, REPORT_START, REPORT_END, rho)
             jan = arm_stats(records, 0, REPORT_START, rho)
 
@@ -223,12 +240,15 @@ def main() -> None:
                 "报告区间": rep,
                 "库存修正费用_元": adj,
             })
+            rs = rep["储备线"]
             print(f"  α={alpha} ρ={rho} λ={lam:.2f}  "
                   f"报告区间 {rep['总费用_元']:>14,.2f} 元  "
                   f"期初 {rep['出发储电量_kWh']:>8,.1f} → 期末 "
                   f"{rep['期末储电量_kWh']:>8,.1f} kWh  "
-                  f"Ē日末 {rep['参考轨迹']['日末均值_kWh']:>8,.1f} "
-                  f"(贴下限 {rep['参考轨迹']['日末贴下限占比'] * 100:5.1f}%)")
+                  f"Ebar日末 {rep['参考轨迹']['日末均值_kWh']:>8,.1f} "
+                  f"贴上限 {rep['参考轨迹']['全时段贴上限占比'] * 100:5.1f}%  "
+                  f"禁放 {rs['放电被结构性拒绝_时段占比'] * 100:5.2f}%"
+                  f"（口径a {rs['E_低于R_时段占比'] * 100:5.2f}%）")
 
     # 标定准则的库存偏差检验：λ=0 是不是窗口截断造成的假象？
     be = report_breakeven(price)
@@ -249,7 +269,7 @@ def report_breakeven(price: np.ndarray) -> dict | None:
     v_star = be["临界单价_元每kWh"]
     # 库存在最贵时段顶替计划购电的边际价值上界：η_c·η_d·max p_t
     v_cap = 0.9 * 0.9 * float(price.max())
-    print(f"\n盈亏平衡检验（库存计价准则 J + v·(E_初 − E_末)）")
+    print(f"\n盈亏平衡检验（库存计价准则 J + v·(E_初 - E_末)）")
     print(f"  候选点 {be['候选点数']} 个，v=0 时最优 "
           f"α={be['v=0 时最优']['α']} ρ={be['v=0 时最优']['ρ']} "
           f"λ={be['v=0 时最优']['λ']:.2f}"
