@@ -1,0 +1,31 @@
+% 本文件由 03_代码/p4_tables.py 自动生成，请勿手工修改。
+% 数据源：06_支撑材料/p4_results.json
+
+\begin{table}[htbp]
+  \centering
+  \caption{两个交付文件在 2025 年 2 月 1 日--12 月 31 日（334 天）的实际运行结果}
+  \label{tab:p4-branch}
+  \footnotesize
+  \begin{tabular}{lrr}
+    \toprule
+    指标 & result4-2（计划不得修改） & result4-3（6/12/18 可调整） \\
+    \midrule
+    计划量（$0{:}00$ 定下的量）/kWh & 21,705,435 & 21,344,253 \\
+    最终生效常规量/kWh & 21,705,435 & 21,757,381 \\
+    上调量/kWh & --- & 413,129 \\
+    紧急购电量/kWh & 116,391 & 23,843 \\
+    \midrule
+    弃电量/kWh & 2,645,486 & 2,601,538 \\
+    计划费/元 & 14,041,884 & 13,778,495 \\
+    调整费/元 & --- & 502,334 \\
+    紧急费/元 & 698,929 & 121,574 \\
+    合计费用/元 & \textbf{14,740,813} & \textbf{14,402,404} \\
+    期初储电量/kWh & 7,007 & 6,909 \\
+    期末储电量/kWh & 6,242 & 6,100 \\
+    \bottomrule
+  \end{tabular}
+  \par\vspace{2pt}
+  \begin{minipage}{.92\textwidth}\footnotesize
+    注：两个分支都在\textbf{同一条附件 4 实际价格路径}上独立回放并独立标定，费用一栏不可相加。两者均按实际电价结算（含初始计划费）；主计费口径下不允许下调，故 result4-3 的下调量为零。
+  \end{minipage}
+\end{table}

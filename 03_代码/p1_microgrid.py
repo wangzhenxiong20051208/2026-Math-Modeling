@@ -135,10 +135,10 @@ class Variant:
 
 @dataclass
 class Solution:
-    g: np.ndarray    # 购电功率 kW
-    c: np.ndarray    # 充电功率 kW
-    d: np.ndarray    # 放电功率 kW
-    s: np.ndarray    # 弃光功率 kW
+    g: np.ndarray    # 购电量 kWh
+    c: np.ndarray    # 充电量 kWh
+    d: np.ndarray    # 放电量 kWh
+    s: np.ndarray    # 弃光量 kWh
     E: np.ndarray    # 各时段末储电量 kWh（E[i] 为第 i 时段末）
     E0: float        # 0:00 储电量 kWh
     obj: float       # 全天购电费 元
@@ -152,8 +152,11 @@ class Solution:
 def solve(df: pd.DataFrame, var: Variant) -> Solution:
     """装配并求解问题一的 LP / MILP。"""
     price = df["电价"].to_numpy(float)                  # 元/kWh
-    load = df["小区负载"].to_numpy(float)                # kW
-    pv = df["光伏发电预测功率"].to_numpy(float)           # kW
+    load = df["小区负载"].to_numpy(float)                # 负载功率 kW
+    pv = df["光伏发电预测功率"].to_numpy(float)           # 光伏功率 kW
+    # 决策变量一律取**电量**口径（kWh），与论文一致：输入的功率先乘 Δt。
+    load_e = load * TAU                                 # 负载电量 kWh
+    pv_e = pv * TAU                                     # 光伏电量 kWh
 
     ec, ed = var.eta_charge, var.eta_discharge
     nz = N if var.binary else 0
@@ -165,9 +168,9 @@ def solve(df: pd.DataFrame, var: Variant) -> Solution:
     def blk(start: int) -> slice:
         return slice(start, start + N)
 
-    # ---- 目标：min Σ p_t g_t Δt （g 为功率，乘 Δt 得电量）
+    # ---- 目标：min Σ p_t g_t （g 已是电量 kWh，无需再乘 Δt）
     cvec = np.zeros(nvar)
-    cvec[blk(iG)] = price * TAU
+    cvec[blk(iG)] = price
 
     # ---- 等式约束
     eq_rows, eq_cols, eq_vals, eq_rhs = [], [], [], []
@@ -179,21 +182,22 @@ def solve(df: pd.DataFrame, var: Variant) -> Solution:
             eq_vals.append(val)
         eq_rhs.append(rhs)
 
-    # (1) 供需平衡（等式 + 显式弃光）：
-    #     g_t + (pv_t - s_t) + d_t = load_t + c_t
-    #  => g_t + d_t - c_t - s_t = load_t - pv_t
+    # (1) 供需平衡（等式 + 显式弃光），全部为电量 kWh：
+    #     g_t + (v_t - s_t) + d_t = l_t + c_t
+    #  => g_t + d_t - c_t - s_t = l_t - v_t
     for i in range(N):
         add_eq(i, [(iG + i, 1.0), (iD + i, 1.0), (iC + i, -1.0), (iS + i, -1.0)],
-               load[i] - pv[i])
+               load_e[i] - pv_e[i])
 
-    # (2) 储能状态递推：E_t = E_{t-1} + eta_c*c_t*Δt - d_t*Δt/eta_d
+    # (2) 储能状态递推（电量口径，系数即效率本身）：
+    #     E_t = E_{t-1} + eta_c*c_t - d_t/eta_d
     for i in range(N):
         row = N + i
         coeffs = [(iE + i, 1.0)]
         if i > 0:
             coeffs.append((iE + i - 1, -1.0))
-        coeffs.append((iC + i, -ec * TAU))
-        coeffs.append((iD + i, TAU / ed))
+        coeffs.append((iC + i, -ec))
+        coeffs.append((iD + i, 1.0 / ed))
         if i == 0 and var.free_e0:
             coeffs.append((nvar, -1.0))     # 追加变量 E0
         add_eq(row, coeffs, var.e0 if i == 0 and not var.free_e0 else 0.0)
@@ -222,20 +226,21 @@ def solve(df: pd.DataFrame, var: Variant) -> Solution:
 
     constraints = [LinearConstraint(A_eq, b_eq, b_eq)]
 
-    # ---- 充放电互斥（仅 MILP）：c_t <= P_max*z_t, d_t <= P_max*(1-z_t)
+    # ---- 充放电互斥（仅 MILP），大 M 取电量上界 M = P_max*Δt = 2500/3 kWh：
+    #      c_t <= M*z_t,  d_t <= M*(1-z_t)
     if var.binary:
         ub_rows, ub_cols, ub_vals, ub_rhs = [], [], [], []
         for i in range(N):
-            # c_i - P_max*z_i <= 0
+            # c_i - M*z_i <= 0
             ub_rows += [2 * i, 2 * i]
             ub_cols += [iC + i, iZ + i]
-            ub_vals += [1.0, -P_MAX]
+            ub_vals += [1.0, -M_ENERGY]
             ub_rhs.append(0.0)
-            # d_i + P_max*z_i <= P_max
+            # d_i + M*z_i <= M
             ub_rows += [2 * i + 1, 2 * i + 1]
             ub_cols += [iD + i, iZ + i]
-            ub_vals += [1.0, P_MAX]
-            ub_rhs.append(P_MAX)
+            ub_vals += [1.0, M_ENERGY]
+            ub_rhs.append(M_ENERGY)
         A_ub = csr_matrix((ub_vals, (ub_rows, ub_cols)),
                           shape=(2 * N, nvar + n_extra))
         constraints.append(LinearConstraint(A_ub, -np.inf, np.array(ub_rhs)))
@@ -251,9 +256,9 @@ def solve(df: pd.DataFrame, var: Variant) -> Solution:
     ])
     ub = np.concatenate([
         np.full(N, np.inf),     # g 无上限：5000 kW 限制的是储能而非外网购电
-        np.full(N, P_MAX),      # c
-        np.full(N, P_MAX),      # d
-        pv.copy(),              # s <= 光伏可用功率（弃光不超过发电）
+        np.full(N, M_ENERGY),   # c <= 单时段最大充电量
+        np.full(N, M_ENERGY),   # d <= 单时段最大放电量
+        pv_e.copy(),            # s <= 光伏可用电量（弃光不超过发电）
         np.full(N, E_MAX),      # E 上界
         np.ones(nz),            # z
     ])
@@ -288,22 +293,22 @@ def validate(sol: Solution, df: pd.DataFrame, var: Variant, tol: float = 1e-6) -
     pv = df["光伏发电预测功率"].to_numpy(float)
     ec, ed = var.eta_charge, var.eta_discharge
 
-    # 1) 逐段供需平衡（等式 + 显式弃光）
-    resid = sol.g + (pv - sol.s) + sol.d - load - sol.c
-    if np.abs(resid).max() > tol * max(1.0, load.max()):
-        problems.append(f"供需平衡残差过大：{np.abs(resid).max():.3e} kW")
+    # 1) 逐段供需平衡（等式 + 显式弃光），电量口径
+    resid = sol.g + (pv * TAU - sol.s) + sol.d - load * TAU - sol.c
+    if np.abs(resid).max() > tol * max(1.0, (load * TAU).max()):
+        problems.append(f"供需平衡残差过大：{np.abs(resid).max():.3e} kWh")
 
     # 2) 弃光量非负且不超过光伏出力
     if sol.s.min() < -tol:
-        problems.append(f"弃光量为负：{sol.s.min():.6f} kW")
-    if (sol.s - pv).max() > tol:
+        problems.append(f"弃光量为负：{sol.s.min():.6f} kWh")
+    if (sol.s - pv * TAU).max() > tol:
         problems.append("弃光量超过光伏可用出力")
 
-    # 3) 充放电功率限值
-    if sol.c.max() > P_MAX + tol:
-        problems.append(f"充电功率越限 {sol.c.max():.4f} > {P_MAX}")
-    if sol.d.max() > P_MAX + tol:
-        problems.append(f"放电功率越限 {sol.d.max():.4f} > {P_MAX}")
+    # 3) 充放电量限值（单时段不超过 M = P_max*Δt）
+    if sol.c.max() > M_ENERGY + tol:
+        problems.append(f"充电量越限 {sol.c.max():.4f} > {M_ENERGY}")
+    if sol.d.max() > M_ENERGY + tol:
+        problems.append(f"放电量越限 {sol.d.max():.4f} > {M_ENERGY}")
 
     # 4) 储电量上下界（序列含 E0，共 145 个状态点）
     Eseq = np.concatenate([[sol.E0], sol.E])
