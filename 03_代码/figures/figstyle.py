@@ -42,17 +42,46 @@ C_SAVE          节约        #2E9E44     仅用于"费用下降"方向性提示
 
 字体与可编辑文本
 ----------------
-**中文回退必须写成 `font.family` 的列表，不能写 `font.sans-serif` 列表。**
+**全文与论文正文同族：拉丁/数字走 Times New Roman，中文走宋体（SimSun）。**
 
-    font.family = ['Arial', 'Microsoft YaHei', 'DejaVu Sans']   # ✓ 正确
-    font.sans-serif = ['Arial', 'Microsoft YaHei']              # ✗ 无效，中文变豆腐块
+    font.family = ['Times New Roman', 'SimSun', 'DejaVu Sans']   # ✓ 正确
+    font.sans-serif = ['Times New Roman', 'SimSun']              # ✗ 无效，中文变豆腐块
 
-matplotlib 的逐字形回退只认 `font.family` 列表；把候选字体放在 `font.sans-serif`
-里时它只取第一个能解析的字体（Arial），缺字直接画成空白/豆腐块且**不报错**
-（只在 savefig 时给 UserWarning）。本仓库已实测：拉丁字形走 Arial、中文回退到
-微软雅黑，两者共用一条 `font.family` 列表；该行为由 `_font_probe.py` 像素级校验。
+为什么必须写成 `font.family` **列表**：matplotlib 的逐字形回退只认 `font.family`
+列表；把候选字体放进 `font.sans-serif` 时它只取第一个能解析的字体，缺字直接画成
+空白/豆腐块且**不报错**（只在 savefig 时给 UserWarning）。逐字形回退意味着同一个
+字符串里 Times New Roman 管拉丁与数学符号、SimSun 管汉字，作者不必手工分段。
+
+与论文的一致性：`05_论文/final_new/cumcmthesis.cls` 用 `\setmainfont{Times New
+Roman}` 且图注用 `\songti`，故插图必须用同一族字体，否则图内数字与正文数字
+字重、字宽不一致，排到版面上会明显"跳"。
+
+数学文本（mathtext）必须显式对齐到 Times：`mathtext.fontset = 'custom'` 并把
+`mathtext.rm/it/bf` 指到 Times New Roman，否则 `$...$` 里的字母会回落到
+DejaVu Sans，与正文的 Times 不是同一副字形。
 
 `pdf.fonttype = 42` / `svg.fonttype = 'none'` 保证导出后文字仍可编辑、可检索。
+
+图内文字规范（prose gate）
+--------------------------
+**图内只保留四类文字**：坐标轴标签、刻度标签、图例文字、panel 字母 (a)(b)(c)。
+除这四类之外，图内**只允许数字与符号**：数据标签 `1,474`、`+99`、`−78.1%`、
+集合记号 `{6,12}`、单位 `kWh`、以及 `MAE 48 kW` 这类「缩写 + 数值」。
+
+**图内一律不得出现汉字，也不得出现英文句子。** 顶部大标题、区域/曲线名
+（`已执行冻结`、`峰价`、`空信息`、`基线 = 100%`）、图内结论句
+（`紧急费 69.9 → 15.3 万元`）、底部脚注——全部移入 LaTeX 的 `\caption`
+与图下"注"。
+
+判定见 `_forbidden_reason()`：非豁免文字里出现**任何**允许字符集之外的字符
+（汉字、全角标点）即违规；或字母词数 > `PROSE_WORDS_MAX` 判为英文句子。
+该规则由 `audit_prose()` 在 `save_figure()` 内强制执行，违反即抛
+`ProseInFigureError` 阻断导出——图像里的文字无法被检索、无法被正文引用，
+也无法随论文字号统一缩放，故不留在图里。
+
+> 教训：首版闸门按"句子长度"判定（汉字 ≥ 9 才算成句），于是
+> `紧急费 69.9 → 15.3 万元`（5 个汉字）一路放行。**判据必须是字符类别，
+> 不是长度**——短标签一样是"图内文字"。
 
 字号下限
 --------
@@ -67,6 +96,8 @@ matplotlib 的逐字形回退只认 `font.family` 列表；把候选字体放在
 
 from __future__ import annotations
 
+import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -167,10 +198,17 @@ MS_MARKER = 3.2    # marker 尺寸
 def apply_style() -> None:
     """应用全篇统一 rcParams。每个绘图脚本在建立 figure 之前调用一次。"""
     mpl.rcParams.update({
-        # —— 字体：拉丁走 Arial，中文逐字形回退到微软雅黑 ——
+        # —— 字体：拉丁/数字走 Times New Roman，中文逐字形回退到宋体 ——
         # 必须用 font.family 列表；放进 font.sans-serif 不会触发回退（见模块 docstring）。
-        "font.family": ["Arial", "Microsoft YaHei", "DejaVu Sans"],
-        "axes.unicode_minus": False,   # 中文字体下负号正常显示
+        # 与论文一致：cls 用 \setmainfont{Times New Roman} + 图注 \songti。
+        #
+        # 第三顺位排 STIXGeneral 而不是 DejaVu Sans：Times 与宋体都缺少数数学符号
+        # （实测缺 U+2205 ∅；∈ ⊆ → ± 等同样不在 Times 里），逐字形回退会落到
+        # DejaVu Sans —— 一个无衬线体，夹在 Times 中间一眼可辨。STIXGeneral 随
+        # matplotlib 分发、按 Times 设计，补这类符号视觉上与正文同族。
+        # 顺序不可颠倒：SimSun 必须在 STIXGeneral 之前，否则汉字会被 STIX 截走。
+        "font.family": ["Times New Roman", "SimSun", "STIXGeneral", "DejaVu Sans"],
+        "axes.unicode_minus": False,   # 负号走 U+002D，避免宋体缺 U+2212 时缺字
 
         # —— 可编辑文本：PDF 嵌入 TrueType，SVG 保留 <text> 节点 ——
         "pdf.fonttype": 42,
@@ -223,8 +261,16 @@ def apply_style() -> None:
         "figure.facecolor": "white",
         "axes.facecolor": "white",
 
-        # —— 数学文本：不调用外部 LaTeX（环境无保证），用 mathtext ——
-        "mathtext.fontset": "dejavusans",
+        # —— 数学文本：不调用外部 LaTeX（环境无保证），用 mathtext。
+        # fontset='custom' 并把 rm/it/bf 指到 Times New Roman，否则 $...$ 里的
+        # 字母会回落 DejaVu Sans，与正文 Times 不同字形。 ——
+        "mathtext.fontset": "custom",
+        "mathtext.rm": "Times New Roman",
+        "mathtext.it": "Times New Roman:italic",
+        "mathtext.bf": "Times New Roman:bold",
+        "mathtext.cal": "Times New Roman:italic",
+        "mathtext.sf": "Times New Roman",
+        "mathtext.tt": "Times New Roman",
         "mathtext.default": "regular",
     })
 
@@ -272,28 +318,175 @@ def zero_line(ax, **kw):
     return ax.axhline(0, **kw)
 
 
+# ================================================================ 图内禁文字（prose gate）
+
+class ProseInFigureError(RuntimeError):
+    """图内出现成句文字（应移入 caption / 注）。"""
+
+
+#: 允许出现在图内非豁免文字里的字符：ASCII 可打印 + 组合变音符 + 数学/希腊符号。
+#: 只要出现集合之外的字符（**任何汉字**、全角括号/标点）即判违规。
+_ALLOWED_CHARS = (
+    {chr(c) for c in range(0x20, 0x7F)}         # ASCII 可打印
+    | {chr(c) for c in range(0x300, 0x370)}     # 组合变音符（R̂ 的 ̂ 等）
+    | set("−–—≤≥≠≈±×÷·⋅→←↑↓∈∉⊆⊂∪∩∅∞√∑∏∫∂∇"
+          "ΔΣΠΩΓΘΛΞΦΨαβγδεζηθικλμνξπρστυφχψω"
+          "°′″⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉½¼¾‰℃…•■□●○◆◇▲▼")
+)
+
+#: 图内非豁免文字含超过该数量的英文单词，即视为英文句子
+PROSE_WORDS_MAX = 3
+
+_WORD_RE = re.compile(r"[A-Za-z]{2,}")
+
+
+def _forbidden_reason(text: str) -> str | None:
+    """该段图内文字被禁止时返回理由字符串，合法则返回 None。
+
+    合法（None）：`1,474`、`+99`、`−78.1%`、`0`、`{6,12}`、`MAE 48 kW`。
+    违规：`峰价 1.40`（含汉字）、`0（基线）`（全角括号 + 汉字）、
+    `紧急费 69.9 → 15.3 万元`（含汉字）、`Room mean square error`（英文句子）。
+    """
+    s = text.strip()
+    if not s:
+        return None
+    bad = sorted({ch for ch in s
+                  if ch not in _ALLOWED_CHARS and not ch.isspace()})
+    if bad:
+        cjk = "".join(ch for ch in bad if "\u4e00" <= ch <= "\u9fff")
+        if cjk:
+            return f"含汉字「{cjk[:12]}」"
+        return "含全角/图外字符 " + "".join(bad)[:12]
+    words = _WORD_RE.findall(s)
+    if len(words) > PROSE_WORDS_MAX:
+        return f"英文句子（{len(words)} 个单词）"
+    return None
+
+
+def _free_texts(fig) -> list:
+    """图内「自由文字」：用 ``ax.text`` / ``ax.annotate`` / ``fig.text`` 显式放上去的文字。
+
+    刻度标签、坐标轴标签、panel 标题、图例文字**天然不进这个集合**，因此自动豁免——
+    它们本来就是图的组成部分，且中文刻度标签是合法的（参考画法：`预测均值策略`）。
+
+    为什么不用 ``fig.findobj(Text)`` 反选：首版先 Id 收集豁免集、再 findobj 排除，
+    而刻度标签会在 draw 前后被重建，Id 匹配失效，导致 17 处合法刻度标签被误判违规，
+    同时真正的违规项混在几十条噪声里看不出来。**正向收集 ax.texts / fig.texts
+    才是稳定的判据**——那个集合才是"人手写进图里的文字"。
+    """
+    out: list = []
+    for ax in fig.axes:
+        out.extend(t for t in ax.texts if t.get_text().strip())
+    out.extend(t for t in fig.texts if t.get_text().strip())
+    return out
+
+
+def audit_prose(fig, *, stem: str = "",
+                json_out: Path | None = None, strict: bool = True) -> list[str]:
+    """检查图内自由文字里是否有汉字 / 成句文字；返回违规字符串列表。
+
+    用法：极少数确有必要的图内短语（如流程图上框内名词），给该 `Text` 打标记：
+    ``t = ax.text(...); t._prose_exempt = True``。
+    """
+    offenders: list[tuple[str, str]] = []
+    for t in _free_texts(fig):
+        if getattr(t, "_prose_exempt", False):
+            continue
+        reason = _forbidden_reason(t.get_text())
+        if reason is not None:
+            offenders.append((t.get_text().strip(), reason))
+
+    if json_out is not None:
+        import json as _json
+        json_out.parent.mkdir(parents=True, exist_ok=True)
+        json_out.write_text(_json.dumps(
+            {"stem": stem, "words_max": PROSE_WORDS_MAX,
+             "n_offenders": len(offenders),
+             "verdict": "PASS" if not offenders else "FAIL",
+             "offenders": [s for s, _ in offenders],
+             "details": [{"text": s, "reason": r} for s, r in offenders]},
+            ensure_ascii=False, indent=2),
+            encoding="utf-8")
+
+    if offenders and strict:
+        shown = "\n".join(f"  · {s[:60]}   ← {r}" for s, r in offenders[:12])
+        raise ProseInFigureError(
+            f"[{stem}] 图内出现 {len(offenders)} 处汉字/成句文字，"
+            f"必须移入 caption / 注：\n{shown}")
+    return [s for s, _ in offenders]
+
+
+# ================================================================ caption / 注 登记
+
+#: 与图片同目录的 caption 台账：figure stem → {caption, note}
+CAPTION_FILE = FIG_DIR / "captions.json"
+
+
+def record_caption(stem: str, caption: str, note: str = "") -> Path:
+    """把某张图的正文标题与图下"注"登记到 ``04_图/captions.json``。
+
+    这样图的文字与图本身解耦：图内只剩坐标轴/刻度/图例/panel 字母，
+    标题与注由 `build_captions.py` 生成 LaTeX 片段、直接放进论文的
+    ``\\caption{}`` 与 ``figure`` 环境内。
+    """
+    import json as _json
+    data: dict[str, dict[str, str]] = {}
+    if CAPTION_FILE.exists():
+        try:
+            data = _json.loads(CAPTION_FILE.read_text(encoding="utf-8"))
+        except _json.JSONDecodeError:
+            data = {}
+    data[stem] = {"caption": caption.strip(), "note": note.strip()}
+    CAPTION_FILE.write_text(
+        _json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return CAPTION_FILE
+
+
 # ================================================================ 导出
 
 def save_figure(fig, stem: str, *, formats=("pdf", "svg", "png"), dpi: int = 600,
                 pad: float = 0.02, alignment: dict | None = None,
-                close: bool = True) -> list[Path]:
-    """统一导出：先跑多面板对齐门，再写 PDF(矢量) + PNG(300dpi 预览)。
+                close: bool = True, caption: str | None = None,
+                note: str | None = None, prose_gate: bool | None = None) -> list[Path]:
+    """统一导出：先跑「图内禁成句文字」门与多面板对齐门，再写 PDF + SVG + PNG。
 
     Parameters
     ----------
     fig   : matplotlib Figure（已完成全部布局，勿再改动）
     stem  : 文件名主干，例如 ``fig01_framework``
+    caption : 该图的正文标题（进入 LaTeX ``\\caption{}``）。给了就登记到
+              ``04_图/captions.json``，供 `build_captions.py` 生成 tex 片段。
+    note  : 图下"注"（进入 figure 环境内的 ``\\footnotesize 注：...``）。
     alignment : 传给 ``require_matplotlib_panel_alignment`` 的额外参数
                 （显式 row_groups / column_groups / exemptions）。
                 单面板图会自行判定为 NOT APPLICABLE（退出码 0，视为通过）。
+    prose_gate : ``True`` 强制跑"图内禁成句文字"门；``None``（默认）取环境变量
+                ``FIG_PROSE_GATE``，未设置时为 ``True``。设 ``0`` 可跳过——**仅**给
+                尚未迁移的存量图（AI-1 的 Fig.1–Fig.5）在批量重出时用，属临时豁免，
+                不是长期选项；单张手跑时不要设它。
 
-    多面板图必须先通过 1.5 pt 对齐门；不通过会抛 PanelAlignmentError，
-    从而阻断导出——这是刻意的，不要 try/except 掉。
+    两道门都**刻意**会抛异常阻断导出，不要 try/except 掉：
+    * `ProseInFigureError` —— 图里还有成句文字，必须先移进 caption / 注；
+    * `PanelAlignmentError` —— 多面板未在 1.5 pt 内对齐。
     """
     from audit_panel_alignment import require_matplotlib_panel_alignment
 
+    if prose_gate is None:
+        prose_gate = os.environ.get("FIG_PROSE_GATE", "1").strip() not in ("0", "false", "no")
+
     out_pdf = FIG_PDF / f"{stem}.pdf"
     out_png = FIG_DIR / f"{stem}.png"
+
+    if prose_gate:
+        audit_prose(fig, stem=stem, json_out=FIG_QA / f"{stem}.prose-audit.json",
+                    strict=True)
+    else:
+        # 跳过也要留痕，避免"没写审计文件"被误读成"通过"。
+        audit_prose(fig, stem=stem, json_out=FIG_QA / f"{stem}.prose-audit.json",
+                    strict=False)
+        print(f"[prose gate] {stem}: 已按 FIG_PROSE_GATE=0 临时豁免（存量图）")
+    if caption is not None or note is not None:
+        record_caption(stem, caption or "", note or "")
 
     require_matplotlib_panel_alignment(
         fig,
@@ -384,6 +577,10 @@ __all__ = [
     "FS_TICK", "FS_LABEL", "FS_ANNOT", "FS_PANEL", "FS_TITLE",
     "FS_LEGEND", "FS_NOTE",
     "LW_AXIS", "LW_MAIN", "LW_THIN", "LW_REF", "MS_MARKER",
+    "FONT_LATIN", "FONT_CJK", "FONT_CJK_FALLBACK", "FONT_MATH_FALLBACK",
+    "FONT_FALLBACK", "FONT_CHAIN", "MATHTEXT_FONTSET",
+    "PROSE_WORDS_MAX", "ProseInFigureError", "audit_prose",
+    "CAPTION_FILE", "record_caption",
     "apply_style", "add_panel_label", "panel_title", "direct_label",
     "zero_line", "save_figure", "audit_collisions", "audit_glyphs", "wrap_cjk",
     *PALETTE.keys(),

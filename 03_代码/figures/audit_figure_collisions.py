@@ -272,7 +272,9 @@ def extract_pdf_geometry(path: Path) -> list[PageGeometry]:
 
             text_dict = page.get_text("dict")
             text_index = 0
-            used_trace_indexes: set[int] = set()
+
+            # ---- 第一遍：按行收集松散包围盒（该行所有 span 的并集） ----
+            line_rows: list[tuple[str, Rect]] = []
             for block in text_dict.get("blocks", []):
                 if block.get("type") != 0:
                     continue
@@ -283,20 +285,34 @@ def extract_pdf_geometry(path: Path) -> list[PageGeometry]:
                     loose_bbox = union_rects(normalize_rect(span["bbox"]) for span in spans)
                     if loose_bbox is None:
                         continue
-                    matched_traces = [
-                        trace
-                        for trace in trace_rows
-                        if trace.index not in used_trace_indexes
-                        and rect_overlap_ratio(trace.bbox, loose_bbox) >= 0.3
-                    ]
-                    bbox = union_rects(trace.bbox for trace in matched_traces) or loose_bbox
-                    used_trace_indexes.update(trace.index for trace in matched_traces)
                     text = "".join(span.get("text", "") for span in spans).strip()
-                    geometry.texts.append(TextBox(index=text_index, text=text, bbox=bbox))
-                    text_index += 1
+                    line_rows.append((text, loose_bbox))
+
+            # ---- 第二遍：每个 trace 只归给「重叠比最大」的那一行 ----
+            # 为什么必须全局取最优、而不能逐行贪心「先到先得」：当两段文字互相压叠
+            # 时（典型场景＝图内标注压在很长的一行图例上），逐行贪心会让先处理的
+            # 那一行把本属于另一行的 trace 抢走，两行于是被并成同一个包围盒 ——
+            # 重叠在数据里彻底消失，text-text 碰撞被**静默漏检**（实测 fig08 的
+            # 「峰价 1.40」压住图例第二行，报 0 fail）。全局最优分配不会制造这种盲区。
+            assigned: list[list[TraceBox]] = [[] for _ in line_rows]
+            assigned_indexes: set[int] = set()
+            for trace in trace_rows:
+                best_row, best_ratio = -1, 0.3
+                for row_index, (_, loose_bbox) in enumerate(line_rows):
+                    ratio = rect_overlap_ratio(trace.bbox, loose_bbox)
+                    if ratio > best_ratio:
+                        best_row, best_ratio = row_index, ratio
+                if best_row >= 0:
+                    assigned[best_row].append(trace)
+                    assigned_indexes.add(trace.index)
+
+            for (text, loose_bbox), row_traces in zip(line_rows, assigned):
+                bbox = union_rects(trace.bbox for trace in row_traces) or loose_bbox
+                geometry.texts.append(TextBox(index=text_index, text=text, bbox=bbox))
+                text_index += 1
 
             for trace in trace_rows:
-                if trace.index in used_trace_indexes:
+                if trace.index in assigned_indexes:
                     continue
                 if rect_intersection(trace.bbox, geometry.bbox) is None:
                     continue

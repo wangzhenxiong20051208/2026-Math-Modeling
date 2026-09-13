@@ -1,0 +1,65 @@
+% ==============================================================================
+% 论文插图题注与图下注 —— 由 03_代码/figures/build_captions.py 自动生成
+% 生成源：04_图/captions.json（各 figNN 脚本通过 S.save_figure(..., caption=, note=) 登记）
+% 说明：图内不含成句文字；编号"图 N"由 LaTeX 自动生成，故 \caption 内不写编号。
+% ==============================================================================
+
+% ======== fig06_rolling_timeline  （建议落位：05_论文/final_new/p3_section.tex）========
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{fig06_rolling_timeline.pdf}
+  \caption{问题三的滚动决策时间轴：新预报只改变未来，已提交的 6 h 交付块永久冻结}
+  \label{fig:p3-rolling-timeline}
+  \par\vspace{2pt}
+  \begin{minipage}{.94\textwidth}
+    \footnotesize 注：(a) 每天 0/6/12/18 时各发布一条 24 点预报曲线，每次只正式提交当前 6 h 交付块，块一经提交即冻结；行右 MAE 为净负荷预报误差，各发布时刻覆盖时段不同，仅作趋势说明。(b) 代表日 2025-12-21 的调整量 $\Delta$ = g $-$ g$^{0}$：灰色区间为已执行并冻结的首个交付块（0:00–6:00），其全天 |$\Delta$| 合计为 0.00 kWh；当日上调 1,031、下调 2,200 kWh，全天 71/144 段发生变动。(c) 四个交付块的全年 |$\Delta$| 合计依次为 0.0 / 519.9 / 669.4 / 242.6 MWh，其中第一块 0/334 天有调整，其余三块分别为 269 / 334 / 334 天。数据：06\_支撑材料/p3\_main\_arrays.npz 的 gP\_d（初始计划）与 gA\_d（最终执行）；分块合计 519.9 + 669.4 + 242.6 MWh 与 p3\_calibration.json 的上调 656,263.05 / 下调 775,660.56 kWh 之和一致（只读引用，未重算模型）。
+  \end{minipage}
+\end{figure}
+
+% ======== fig07_information_value  （建议落位：05_论文/final_new/p3_section.tex）========
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{fig07_information_value.pdf}
+  \caption{预测信息的价值取决于已掌握的信息：边际价值递减，但始终为正}
+  \label{fig:p3-info-value}
+  \par\vspace{2pt}
+  \begin{minipage}{.94\textwidth}
+    \footnotesize 注：信息集 S $\subseteq$ \{6,12,18\} 表示滚动决策中可用的预报更新时刻，$\emptyset$ 为只用 0:00 那条 24 点预报的基线。(a) 节点框内第二行为该信息集的全年合计购电费（万元），边上数字为新增该条预报后的费用变化（万元，负号 = 省钱）。(b) 横轴为相对 $\emptyset$ 的全年节约 $\Delta$J。12 条覆盖边的边际量全部为负（加信息永不更贵），合计恰为 $-$155.9 万元，即总信息价值 J($\emptyset$) $-$ J(全) = 1,559,182.68 元；任何单条预报最多省 117.8 万元，故多条信息优于任何一条（图中虚线即该水平，虚线上方的读数就是该数值）。格图自上而下四层依次为「空信息 / 单条预报 / 两条预报 / 三条全用」，节点颜色由浅到深对应该层级。数据：06\_支撑材料/p3\_analysis.json 的 configs（334 天滚动回放，只读引用，未重算模型）。
+  \end{minipage}
+\end{figure}
+
+% ======== fig08_price_forecast  （建议落位：05_论文/final_new/p4_section.tex）========
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{fig08_price_forecast.pdf}
+  \caption{附件 4 电价的结构分解：价格 = 附件 1 的日内形状 + 星期几的缓慢漂移}
+  \label{fig:p4-price-structure}
+  \par\vspace{2pt}
+  \begin{minipage}{.94\textwidth}
+    \footnotesize 注：(a) x 轴下方的浅灰条带仅标出谷段（0:00–6:00）与晚高峰（18:00–20:00）两个时间窗，不参与数据编码；两条曲线逐时段均值之差 max|$\cdot$| = 5.15e-05 元/kWh，峰谷比 3.76。图中三个数值读数依次为 F 的峰价 1.40、谷价 0.37 与日均价 0.77 元/kWh（点线即日均价水平线）。(b) 残差 R = P $-$ F 按星期几平均，误差棒为各星期几「日均残差」的 $\pm$1$\sigma$；族 A（周一至周四及周日）+0.0545、族 B（周五、周六）-0.1368 元/kWh，相差 0.1913 元/kWh（均价的 25.0\%），星期效应解释残差方差的 41.7\%。(c) 预测照抄论文 $\hat{R}$(d,t) = 0.5R(d$-$7,t) + 0.3R(d$-$14,t) + 0.2R(d$-$21,t)，评价区间（2025-02-01 至 12-31，334 天）复算 MAE 0.044574 元/kWh（$=$均价的 5.8\%），与 06\_支撑材料候选表的 0.044574 逐位一致。预测只读 d$-$7 / d$-$14 / d$-$21 的实际价格（全部落在过去），当日实际价格不进入决策，「实际」曲线仅用于事后评估。数据：01\_题目/C题/附件 的附件 1、附件 4 与 06\_支撑材料 的候选表（只读引用）。
+  \end{minipage}
+\end{figure}
+
+% ======== fig09_p4_strategy  （建议落位：05_论文/final_new/p4_section.tex）========
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{fig09_p4_strategy.pdf}
+  \caption{允许滚动调整后，尾部代价（紧急购电费）减半，全年总费用因此降 3.99\%}
+  \label{fig:p4-strategy-roll}
+  \par\vspace{2pt}
+  \begin{minipage}{.94\textwidth}
+    \footnotesize 注：(a) 六个策略的实际费用拆为计划购电费（深蓝）$+$调整费（紫）$+$紧急购电费（红）三段，柱顶为全年合计。两支合同的计划费几乎相同（均值相差 21 万元），差异全部落在调整费与紧急购电费上。(b) 把增量费用（调整费$+$紧急购电费）单独放大：不可调整合同约 70–74 万元，可滚动调整的只约 35 万元；同策略下 4-3 相对 4-2 的紧急购电费由 69.9 万元降至 15.3 万元，降幅 $-$78.1\%（即图中 4-3 组正上方的读数）。(c) 以「固定电价参考」为参照的节省率，与距「未来价格完全已知」理论下界的差距。4-2 为不可调整合同（提交后不得改量），4-3 为可滚动调整合同（每次只改未来 6 h）；两分支的策略定义、价格输入与风险口径完全一致。同策略下 4-3 相对 4-2 省 58.75 万元（$-$3.99\%），紧急购电费由 69.89 万元降至 15.31 万元（$-$78.1\%）。「已知未来」是完全预知的理论上界，仅用于给出下界，不是可行方案；三个策略的价格输入都只用过去（预测策略用 d$-$7 / d$-$14 / d$-$21 的实际价）。数据：06\_支撑材料/p4\_strategies.csv（6 行真实求解输出，万元口径与 p4\_strategy\_fees.csv 逐行一致，只读引用）。
+  \end{minipage}
+\end{figure}
+
+% ======== fig10_summary  （建议落位：05_论文/final_new/p4_section.tex）========
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{fig10_summary.pdf}
+  \caption{四问逐层叠加：每一层都相对自己的朴素基线更省，尾部代价同步压缩}
+  \label{fig:summary}
+  \par\vspace{2pt}
+  \begin{minipage}{.94\textwidth}
+    \footnotesize 注：(a) 纵轴 = 各问「本文策略 / 该问朴素基线」的费用比，虚线为基线 = 100\%；柱顶读数即该指数，柱顶到 100\% 的距离即相对基线的节约比例。四问的费用指数依次为 73.1\% / 93.5\% / 89.6\% / 99.7\%，即分别省 26.9\% / 6.5\% / 10.4\% / 0.3\%。绝对费用（万元；P1 为万元/日）：P1 4.81 $\rightarrow$ 3.51；P2 1,490.37 $\rightarrow$ 1,393.97；P3 1,497.78 $\rightarrow$ 1,341.86；P4 1,418.95 $\rightarrow$ 1,415.33。基线定义：P1 无储能、P2 预测均值（不加风险余量）、P3 只用 0:00 预报、P4 固定电价参考——同一套模型、各少一项能力。四问的费用口径与电价情景不同（P1 为单日、P2 与 P3 为全年附件 1 情景、P4 换用附件 4 的波动电价），故各问自比，绝对值不可横向比较。(b) 只列可比的两问（同附件 1 情景）：紧急购电费由 P2 的 270.89 与 P3 的 238.27 万元，分别降至 75.55 与 27.29 万元（$-$72.1\% 与 $-$88.5\%）。数据：06\_支撑材料 的 p1/p2/p3/p4 结果文件（只读引用，只做读取与相除）。
+  \end{minipage}
+\end{figure}
