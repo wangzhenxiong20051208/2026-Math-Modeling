@@ -132,15 +132,20 @@ XLO, XHI = -0.88, 3.14
 YLO, YHI = -0.45, 4.36
 
 #: 节点配色：蓝的深浅 = 信息量（与 figstyle"蓝色家族 = 先验信息"一致）
+#: 节点/柱配色：**同一色相（S.C_GRID，墨绿 = 日前计划/先验信息）由浅到深 = 信息量多少**。
+#: 空信息集（rank 0）刻意**不入绿色家族**，改用中性暖灰的浅色档 —— 它不是"信息较少"，
+#: 而是"没有信息"，用灰与用绿是两个不同的断言。三元组含义：(填色, 描边, 字色)。
+#: 旧版这里是一条蓝色渐深阶（#E6EFF9 → #0F4D92），随主调改暖后全部重派生。
 NODE_STYLE = {
-    0: ("#F0F0F0", "#8E8E8E", "#3A3A3A"),
-    1: ("#E6EFF9", "#9CBFE0", "#1F3B57"),
-    2: ("#C9DDF0", "#5E93C8", "#16334D"),
-    3: ("#0F4D92", "#0F4D92", "#FFFFFF"),
+    0: (S.tint(S.C_REF, 0.88), S.tint(S.C_REF, 0.40), S.C_ACTUAL),
+    1: (S.tint(S.C_GRID, 0.74), S.tint(S.C_GRID, 0.34), S.C_ACTUAL),
+    2: (S.tint(S.C_GRID, 0.44), S.tint(S.C_GRID, 0.12), S.C_ACTUAL),
+    3: (S.C_GRID, S.C_GRID, "#FFFFFF"),
 }
-BAR_COLOR = {0: "#D6D6D6", 1: "#9CBFE0", 2: "#5E93C8", 3: S.C_GRID}
-C_EDGE = "#B4B4B4"
-C_MARGIN = "#1F7A36"      # 边际价值（全部为节约方向）
+BAR_COLOR = {0: S.tint(S.C_REF, 0.82), 1: S.tint(S.C_GRID, 0.64),
+             2: S.tint(S.C_GRID, 0.34), 3: S.C_GRID}
+C_EDGE = S.tint(S.C_NEUTRAL, 0.45)
+C_MARGIN = S.C_SAVE       # 边际价值（全部为节约方向）
 
 FS_NODE = 6.3             # 节点两行字号
 FS_EDGE = 6.1             # 边标签字号
@@ -334,11 +339,11 @@ def build(J: dict[str, float], emg: dict[str, float]) -> plt.Figure:
     for y, k, v in zip(ys, order, vals):
         if v < 1e-9:
             ax_b.text(0.0, y - 0.44, "0", va="center", ha="left",
-                      fontsize=6.0, color="#7A7A7A")   # ∅ 行＝基线，读数为 0
+                      fontsize=6.0, color=S.C_NEUTRAL)   # ∅ 行＝基线，读数为 0
         else:
             ax_b.text(v - vmax * 0.015, y, f"{v:,.1f}", va="center",
                       ha="right", fontsize=6.3,
-                      color="#FFFFFF" if RANK[k] == 3 else "#16334D",
+                      color="#FFFFFF" if RANK[k] == 3 else S.C_ACTUAL,
                       fontweight="bold", zorder=5)
 
     # "最好单条"参考线：说明多条信息 > 任何单条。数值放在顶部行间空白处——

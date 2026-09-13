@@ -18,47 +18,68 @@ r"""
 4. 少用 legend，优先直接标注（direct label）。
 5. 白底、无 3D、无装饰性渐变。
 
-颜色语义表
-----------
+颜色语义表（取向：赤陶 / 暖调 · 无蓝紫）
+----------------------------------------
 ==============  ==========  ==========  ================================
 token           中文         Hex         用途与图元
 ==============  ==========  ==========  ================================
-C_PRICE         电价        #A0522D     阶梯线（step），细，红褐
-C_FORECAST      预测        #3775BA     虚线；净负荷/光伏/电价预测
-C_RISK          风险修正    #E28E2C     实线或色带；风险余量、风险净负荷
-C_ACTUAL        实际        #272727     实线，全图最重；实际净负荷/储电量
-C_GRID          计划购电    #0F4D92     柱/填充；日前计划购电量与其费用
-C_EMERGENCY     紧急购电    #D1495B     斜纹柱/填充；5 倍价紧急购电
-C_CHARGE        充电        #3F8F4F     零轴以上柱
-C_DISCHARGE     放电        #7C6CCF     零轴以下柱
-C_SOC           储电量      #33B5A5     粗实线；SOC 轨迹
-C_REF           参考轨迹    #8E8E8E     点线；日前参考轨迹 Ē、物理边界
-C_BAND          区间底纹    #F0F0F0     极浅灰底纹（不可作数据编码）
-C_SAVE          节约        #2E9E44     仅用于"费用下降"方向性提示
+C_PRICE         电价        #B4531F     阶梯线（step），焦橙
+C_FORECAST      预测        #8A7A66     虚线；净负荷/光伏/电价预测，暖灰褐
+C_RISK          风险修正    #E39A2A     实线或色带；风险余量，琥珀
+C_ACTUAL        实际        #1A1A1A     实线，全图最重；墨黑
+C_GRID          计划购电    #1E5B4C     柱/填充；日前计划购电量，墨绿
+C_EMERGENCY     紧急购电    #C1272D     柱/填充；5 倍价紧急购电，朱红
+C_CHARGE        充电        #4A8B2C     零轴以上柱，草绿
+C_DISCHARGE     放电        #8C3A2B     零轴以下柱，赭红
+C_SOC           储电量      #0F5C50     粗实线；SOC 轨迹，深松绿
+C_REF           参考轨迹    #8A8175     点线；参考轨迹 Ē、物理边界，暖灰
+C_BAND          区间底纹    #F0EDE8     暖白底纹（不可作数据编码）
+C_SAVE          节约        #2F7A3E     仅用于"费用下降"方向性提示
 ==============  ==========  ==========  ================================
 
-注：C_FORECAST 与 C_GRID 同属蓝色家族（先验），但取不同明度以便同图出现时
-仍可区分；若二者同时出现，预测用浅蓝、计划购电用深蓝，不得互换。
+**配色取向（2026-09-13 定稿）**：用户明确反馈原蓝紫配色"AI 味太浓、太浅、
+不够醒目"，故整体改为暖调赤陶系，**全文不再使用蓝色与紫色**。
+选型由 `_palette_probe.py` 用真实数据渲染三套候选取一，对比图存
+`04_图/qa/_palette_probe.png`。若要再换主调，改本表即可，五张图统一生效。
+
+注：C_DISCHARGE（赭红）与 C_EMERGENCY（朱红）同属红色家族，但明度差足够，
+且二者从不共存于同一 panel（放电只在 Fig.2(c)，紧急购电只在 Fig.3/4/5）。
 
 字体与可编辑文本
 ----------------
-**全文与论文正文同族：拉丁/数字走 Times New Roman，中文走宋体（SimSun）。**
+**衬线体方案（2026-09-13 定稿）**：拉丁与数字走 Times New Roman，中文走宋体
+（SimSun），与中文论文正文的排版惯例一致。字体真源是本模块的 `FONT_CHAIN`：
 
-    font.family = ['Times New Roman', 'SimSun', 'DejaVu Sans']   # ✓ 正确
-    font.sans-serif = ['Times New Roman', 'SimSun']              # ✗ 无效，中文变豆腐块
+    FONT_CHAIN = ('Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif')
 
-为什么必须写成 `font.family` **列表**：matplotlib 的逐字形回退只认 `font.family`
-列表；把候选字体放进 `font.sans-serif` 时它只取第一个能解析的字体，缺字直接画成
-空白/豆腐块且**不报错**（只在 savefig 时给 UserWarning）。逐字形回退意味着同一个
-字符串里 Times New Roman 管拉丁与数学符号、SimSun 管汉字，作者不必手工分段。
+**回退链必须写成 `font.family` 的列表，不能写 `font.sans-serif` 列表。**
 
-与论文的一致性：`05_论文/final_new/cumcmthesis.cls` 用 `\setmainfont{Times New
-Roman}` 且图注用 `\songti`，故插图必须用同一族字体，否则图内数字与正文数字
-字重、字宽不一致，排到版面上会明显"跳"。
+    font.family = ['Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif']  # ✓
+    font.sans-serif = ['Times New Roman', 'SimSun']                                        # ✗ 中文豆腐块
 
-数学文本（mathtext）必须显式对齐到 Times：`mathtext.fontset = 'custom'` 并把
-`mathtext.rm/it/bf` 指到 Times New Roman，否则 `$...$` 里的字母会回落到
-DejaVu Sans，与正文的 Times 不是同一副字形。
+matplotlib 的逐字形回退只认 `font.family` 列表；把候选字体放在 `font.sans-serif`
+里时它只取第一个能解析的字体（Times New Roman），缺字直接画成空白/豆腐块且
+**不报错**（只在 savefig 时给 UserWarning）。拉丁走 Times、中文走宋体这条分工由
+`_font_probe.py`（像素墨量）与 `_font_coverage.py`（逐字形 cmap 覆盖）双重校验。
+
+⚠️ **宋体没有粗体字形。** 实测 `findfont(SimSun, weight=700)` 返回的仍是
+`simsun.ttc` 常规体——matplotlib 既不报错、也不回退，粗体中文会**静默**退化成
+常规体。本模块用 `_register_cjk_bold_face()` 解决：把黑体（SimHei）的字体面以
+`SimSun + weight=700` 的名义补进 matplotlib 的字体表，于是 `fontweight="bold"`
+的中文自动落到黑体上，**调用方无需任何额外 API**。这既是中文排版「宋体没有粗体
+时用黑体代替」的惯例，也与论文正文自身的 FandolSong + FandolHei 配对一致。
+拉丁与数字不受影响：粗体拉丁仍由 Times New Roman Bold 承接。
+该注册是否真的生效，由 `_font_coverage.py` 打印**实际承接字体文件**来核验。
+
+⚠️ **Times 与宋体都不含 `∅ ∈ ⊆ → ±` 这类数学/几何符号**，逐字形回退若没有专门的
+衬线符号档，会落到 DejaVu 系列——一个无衬线体，夹在 Times 中间一眼可辨。故
+`FONT_CHAIN` 在 SimSun/SimHei 之后、DejaVu 之前插一档 **STIXGeneral**（随
+matplotlib 分发、按 Times 设计）。实测 Fig.7 的 4 个 `∅` 曾掉到 DejaVu Sans，
+加入该档后消失。**顺序不可颠倒**：`SimSun` / `SimHei` 必须排在 STIXGeneral 之前，
+否则汉字会被 STIX 截走。
+
+数学文本（mathtext）**不走** `font.family` 回退链，字体集必须单独指定，
+见 `MATHTEXT_FONTSET`。
 
 `pdf.fonttype = 42` / `svg.fonttype = 'none'` 保证导出后文字仍可编辑、可检索。
 
@@ -120,31 +141,63 @@ for _d in (FIG_DIR, FIG_PDF, FIG_QA):
     _d.mkdir(parents=True, exist_ok=True)
 del _d
 
+# ================================================================ 字体
+
+#: 拉丁与数字：Times New Roman（与中文论文正文的衬线体一致）
+FONT_LATIN = "Times New Roman"
+#: 中文：宋体
+FONT_CJK = "SimSun"
+#: 宋体缺字时的兜底中文字体（黑体），避免落到无中日韩字形的拉丁字体上
+FONT_CJK_FALLBACK = "SimHei"
+#: 数学/几何符号档：Times 与宋体都缺 `∅ ∈ ⊆ → ±` 等符号，逐字形回退若无这一档
+#: 会落到 DejaVu 系列——无衬线体夹在 Times 中间一眼可辨。STIXGeneral 随 matplotlib
+#: 分发、按 Times 设计，补这类符号与正文同族。实测 Fig.7 的 4 个 `∅` 曾掉到
+#: DejaVu Sans，加入该档后消失。
+FONT_MATH_FALLBACK = "STIXGeneral"
+#: 最终兜底：matplotlib 自带，任何机器上都在
+FONT_FALLBACK = "DejaVu Serif"
+
+#: 逐字形回退链。**顺序即优先级**，且必须整体交给 `font.family`（见模块 docstring）。
+#: SimSun / SimHei 必须排在 FONT_MATH_FALLBACK 之前，否则汉字会被 STIX 截走。
+FONT_CHAIN: tuple[str, ...] = (
+    FONT_LATIN, FONT_CJK, FONT_CJK_FALLBACK, FONT_MATH_FALLBACK, FONT_FALLBACK,
+)
+
+#: 数学字体集。mathtext **不走** font.family 回退链，故必须单独指定。
+#: 取 `cm`（Computer Modern）——**与论文正文公式的字体一致**：实测论文成品
+#: `05_论文/final_new/main.pdf` 嵌入的数学字体是 CMR / CMMI / CMSY 系列，
+#: 即 LaTeX 默认的 Computer Modern。图内的目标函数式必须与之同源，
+#: 否则读起来像是从别处贴进来的。（曾用过 dejavusans / stix，均与正文不符。）
+#: 含 `$...$` 的字符串不得混写中文——mathtext 不走 font.family 回退链。
+MATHTEXT_FONTSET = "cm"
+
 # ================================================================ 颜色
 
 #: 语义色板：一个物理量一个颜色，全文复用。
+#: 取向「赤陶」——暖调主导，**不使用蓝紫**：赭石/焦橙/墨绿/绛红，
+#: 接近印刷品配色，刻意避开 matplotlib/seaborn 默认的蓝紫"技术图表"观感。
 PALETTE = {
     # —— 价格 ——
-    "C_PRICE":      "#A0522D",   # 电价：红褐
-    # —— 先验：预测与日前计划（蓝色家族）——
-    "C_FORECAST":   "#3775BA",   # 预测（净负荷/光伏/电价）
-    "C_GRID":       "#0F4D92",   # 日前计划购电量与其费用
+    "C_PRICE":      "#B4531F",   # 电价：焦橙
+    # —— 先验：预测与日前计划 ——
+    "C_FORECAST":   "#8A7A66",   # 预测（净负荷/光伏/电价）：暖灰褐
+    "C_GRID":       "#1E5B4C",   # 日前计划购电量与其费用：墨绿
     # —— 风险修正 ——
-    "C_RISK":       "#E28E2C",   # 风险余量、风险修正净负荷
+    "C_RISK":       "#E39A2A",   # 风险余量、风险修正净负荷：琥珀
     # —— 实际发生 ——
-    "C_ACTUAL":     "#272727",   # 实际净负荷 / 实际储电量
+    "C_ACTUAL":     "#1A1A1A",   # 实际净负荷 / 实际储电量：墨黑
     # —— 尾部代价 ——
-    "C_EMERGENCY":  "#D1495B",   # 紧急购电（5 倍价）
+    "C_EMERGENCY":  "#C1272D",   # 紧急购电（5 倍价）：朱红
     # —— 储能 ——
-    "C_CHARGE":     "#3F8F4F",   # 充电
-    "C_DISCHARGE":  "#7C6CCF",   # 放电
-    "C_SOC":        "#33B5A5",   # 储电量 SOC
+    "C_CHARGE":     "#4A8B2C",   # 充电：草绿
+    "C_DISCHARGE":  "#8C3A2B",   # 放电：赭红
+    "C_SOC":        "#0F5C50",   # 储电量 SOC：深松绿
     # —— 辅助 ——
-    "C_REF":        "#8E8E8E",   # 参考轨迹、物理边界
-    "C_BAND":       "#F0F0F0",   # 底纹（非数据编码）
-    "C_SAVE":       "#2E9E44",   # 节约方向
-    "C_LOSS":       "#C0392B",   # 增加方向
-    "C_NEUTRAL":    "#767676",   # 中性文字
+    "C_REF":        "#8A8175",   # 参考轨迹、物理边界：暖灰
+    "C_BAND":       "#F0EDE8",   # 底纹（非数据编码）：暖白
+    "C_SAVE":       "#2F7A3E",   # 节约方向
+    "C_LOSS":       "#C1272D",   # 增加方向（与紧急购电同源）
+    "C_NEUTRAL":    "#7A736A",   # 中性文字：暖灰
 }
 
 # 便于 `from figstyle import C_PRICE` 直接取用
@@ -176,6 +229,21 @@ def mm2in(mm: float) -> float:
     return mm / MM_PER_IN
 
 
+# ================================================================ 颜色工具
+
+def tint(color, t: float):
+    """把颜色按比例向白色插值：``t=0`` 原色、``t=1`` 纯白。
+
+    用途：同一个物理量需要"深/浅"两档时（已提交 vs 暂定、信息量少 vs 多、
+    基线 vs 本文做法），从该量的语义 token 派生浅色落笔，而**不要新录一个
+    十六进制值** —— 色板换主调时派生色自动跟着走，不会漏改，也不会留下
+    上一个主调残余的蓝紫。返回值是 0–1 的 RGB 三元组，matplotlib 直接可用。
+    """
+    from matplotlib.colors import to_rgb
+    r, g, b = to_rgb(color)
+    return (r + (1.0 - r) * t, g + (1.0 - g) * t, b + (1.0 - b) * t)
+
+
 # ================================================================ 字号与线宽
 
 FS_TICK = 7.5      # 刻度
@@ -195,21 +263,66 @@ MS_MARKER = 3.2    # marker 尺寸
 
 # ================================================================ rcParams
 
+def _register_cjk_bold_face() -> bool:
+    """把黑体（SimHei）注册为宋体（SimSun）的**粗体面**。
+
+    为什么必须这么做：宋体只有 weight=400 一个字重。请求 `weight=700` 时
+    matplotlib 既**不报错、也不回退**，而是照常返回 simsun.ttc 常规体——
+    于是所有粗体中文静默退化为常规体，字重层级消失，且没有任何日志提示。
+    （实测见模块 docstring。）
+
+    做法：复制宋体的 FontEntry，把字体文件换成黑体、字重标为 700，追加进
+    `fontManager.ttflist`。此后 `FontProperties(family='SimSun', weight=700)`
+    解析到黑体，而 `weight=400` 仍解析到宋体。拉丁不受影响——回退链里
+    Times New Roman 排在前面，粗体拉丁由 timesbd.ttf 承接。
+
+    用黑体替代粗体是中文排版惯例，也与论文正文的 FandolSong + FandolHei
+    配对一致，因此图与正文的强调方式统一。
+
+    返回是否注册成功。字体缺失（如换到无中文字体的机器）时返回 False 而不抛
+    异常，保证出图流程不中断。
+    """
+    from matplotlib import font_manager as fm
+
+    def _weight_of(entry) -> int:
+        try:
+            return int(entry.weight)
+        except (TypeError, ValueError):
+            return 400
+
+    ttflist = fm.fontManager.ttflist
+    # 幂等：apply_style 每个脚本都会调一次，重复追加会让字体表无谓膨胀。
+    if any(e.name == FONT_CJK and _weight_of(e) >= 700 for e in ttflist):
+        return True
+
+    sun = next((e for e in ttflist if e.name == FONT_CJK), None)
+    hei = next((e for e in ttflist if e.name == FONT_CJK_FALLBACK), None)
+    if sun is None or hei is None:
+        return False
+
+    import dataclasses
+    ttflist.append(dataclasses.replace(sun, fname=hei.fname, weight=700))
+
+    # 字体表变了，必须清掉 findfont 的缓存，否则仍会命中旧的解析结果。
+    # 这两个缓存是 matplotlib 内部实现，故一律 hasattr 兜底。
+    for clear in (getattr(fm.fontManager, "_findfont_cached", None),
+                  getattr(fm, "_get_font", None)):
+        if clear is not None and hasattr(clear, "cache_clear"):
+            clear.cache_clear()
+    return True
+
+
 def apply_style() -> None:
     """应用全篇统一 rcParams。每个绘图脚本在建立 figure 之前调用一次。"""
+    _register_cjk_bold_face()
     mpl.rcParams.update({
-        # —— 字体：拉丁/数字走 Times New Roman，中文逐字形回退到宋体 ——
-        # 必须用 font.family 列表；放进 font.sans-serif 不会触发回退（见模块 docstring）。
-        # 与论文一致：cls 用 \setmainfont{Times New Roman} + 图注 \songti。
-        #
-        # 第三顺位排 STIXGeneral 而不是 DejaVu Sans：Times 与宋体都缺少数数学符号
-        # （实测缺 U+2205 ∅；∈ ⊆ → ± 等同样不在 Times 里），逐字形回退会落到
-        # DejaVu Sans —— 一个无衬线体，夹在 Times 中间一眼可辨。STIXGeneral 随
-        # matplotlib 分发、按 Times 设计，补这类符号视觉上与正文同族。
-        # 顺序不可颠倒：SimSun 必须在 STIXGeneral 之前，否则汉字会被 STIX 截走。
-        "font.family": ["Times New Roman", "SimSun", "STIXGeneral", "DejaVu Sans"],
-        "axes.unicode_minus": False,   # 负号走 U+002D，避免宋体缺 U+2212 时缺字
-
+        # —— 字体：拉丁与数字走 Times New Roman，中文逐字形回退到宋体 ——
+        # 必须写成 font.family **列表**；放进 font.sans-serif 不会触发回退
+        # （见模块 docstring）。回退链的真源是本模块的 FONT_CHAIN。
+        "font.family": list(FONT_CHAIN),
+        # Times New Roman 含 U+2212 真减号，比 ASCII 连字符更配衬线数字。
+        # 该字符是否真的存在由 `_font_coverage.py` 逐字形校验，缺字会 FAIL。
+        "axes.unicode_minus": True,
         # —— 可编辑文本：PDF 嵌入 TrueType，SVG 保留 <text> 节点 ——
         "pdf.fonttype": 42,
         "ps.fonttype": 42,
@@ -261,16 +374,9 @@ def apply_style() -> None:
         "figure.facecolor": "white",
         "axes.facecolor": "white",
 
-        # —— 数学文本：不调用外部 LaTeX（环境无保证），用 mathtext。
-        # fontset='custom' 并把 rm/it/bf 指到 Times New Roman，否则 $...$ 里的
-        # 字母会回落 DejaVu Sans，与正文 Times 不同字形。 ——
-        "mathtext.fontset": "custom",
-        "mathtext.rm": "Times New Roman",
-        "mathtext.it": "Times New Roman:italic",
-        "mathtext.bf": "Times New Roman:bold",
-        "mathtext.cal": "Times New Roman:italic",
-        "mathtext.sf": "Times New Roman",
-        "mathtext.tt": "Times New Roman",
+        # —— 数学文本：不调用外部 LaTeX（环境无保证），用 mathtext ——
+        # fontset 与正文衬线体配对，见 MATHTEXT_FONTSET 说明。
+        "mathtext.fontset": MATHTEXT_FONTSET,
         "mathtext.default": "regular",
     })
 
@@ -572,16 +678,16 @@ def wrap_cjk(text: str, *, fontsize: float, fig_width_mm: float = FIG_W_FULL,
 
 __all__ = [
     "ROOT", "FIG_DIR", "FIG_PDF", "FIG_QA", "SUP_DIR",
+    "FONT_LATIN", "FONT_CJK", "FONT_CJK_FALLBACK", "FONT_MATH_FALLBACK",
+    "FONT_FALLBACK", "FONT_CHAIN", "MATHTEXT_FONTSET",
     "PALETTE", "TERMS",
     "FIG_W_FULL", "FIG_W_HALF", "mm2in",
     "FS_TICK", "FS_LABEL", "FS_ANNOT", "FS_PANEL", "FS_TITLE",
     "FS_LEGEND", "FS_NOTE",
     "LW_AXIS", "LW_MAIN", "LW_THIN", "LW_REF", "MS_MARKER",
-    "FONT_LATIN", "FONT_CJK", "FONT_CJK_FALLBACK", "FONT_MATH_FALLBACK",
-    "FONT_FALLBACK", "FONT_CHAIN", "MATHTEXT_FONTSET",
     "PROSE_WORDS_MAX", "ProseInFigureError", "audit_prose",
     "CAPTION_FILE", "record_caption",
-    "apply_style", "add_panel_label", "panel_title", "direct_label",
+    "tint", "apply_style", "add_panel_label", "panel_title", "direct_label",
     "zero_line", "save_figure", "audit_collisions", "audit_glyphs", "wrap_cjk",
     *PALETTE.keys(),
 ]

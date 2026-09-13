@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="453.5433070866142pt" height="374.1732283464567pt" viewBox="0 0 453.5433070866142 374.1732283464567">
+<svg xmlns="http://www.w3.org/2000/svg" width="453.5433070866142pt" height="357.1653543307087pt" viewBox="0 0 453.5433070866142 357.1653543307087">
 <rect width="100%" height="100%" fill="white"/>
-<rect x="56.693" y="44.901" width="351.496" height="61.860" fill="none" stroke="#2c7bb6" stroke-width="1.2"/>
-<text x="58.693" y="54.901" font-family="Arial, sans-serif" font-size="8" fill="#2c7bb6">a</text>
-<rect x="56.693" y="119.288" width="351.496" height="61.860" fill="none" stroke="#2c7bb6" stroke-width="1.2"/>
-<text x="58.693" y="129.288" font-family="Arial, sans-serif" font-size="8" fill="#2c7bb6">b</text>
-<rect x="56.693" y="193.674" width="351.496" height="61.860" fill="none" stroke="#2c7bb6" stroke-width="1.2"/>
-<text x="58.693" y="203.674" font-family="Arial, sans-serif" font-size="8" fill="#2c7bb6">c</text>
-<rect x="56.693" y="268.061" width="351.496" height="64.953" fill="none" stroke="#2c7bb6" stroke-width="1.2"/>
-<text x="58.693" y="278.061" font-family="Arial, sans-serif" font-size="8" fill="#2c7bb6">d</text>
-<text x="4" y="369.173" font-family="Arial, sans-serif" font-size="7" fill="#333">PASS: 0 fail, 0 warn</text>
+<rect x="56.693" y="19.644" width="351.496" height="64.033" fill="none" stroke="#2c7bb6" stroke-width="1.2"/>
+<text x="58.693" y="29.644" font-family="Arial, sans-serif" font-size="8" fill="#2c7bb6">a</text>
+<rect x="56.693" y="96.644" width="351.496" height="64.033" fill="none" stroke="#2c7bb6" stroke-width="1.2"/>
+<text x="58.693" y="106.644" font-family="Arial, sans-serif" font-size="8" fill="#2c7bb6">b</text>
+<rect x="56.693" y="173.643" width="351.496" height="64.033" fill="none" stroke="#2c7bb6" stroke-width="1.2"/>
+<text x="58.693" y="183.643" font-family="Arial, sans-serif" font-size="8" fill="#2c7bb6">c</text>
+<rect x="56.693" y="250.643" width="351.496" height="67.235" fill="none" stroke="#2c7bb6" stroke-width="1.2"/>
+<text x="58.693" y="260.643" font-family="Arial, sans-serif" font-size="8" fill="#2c7bb6">d</text>
+<text x="4" y="352.165" font-family="Arial, sans-serif" font-size="7" fill="#333">PASS: 0 fail, 0 warn</text>
 </svg>

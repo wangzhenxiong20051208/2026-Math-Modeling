@@ -146,7 +146,7 @@ def build(D: dict[tuple[str, str], dict]) -> plt.Figure:
              edgecolor="none", linewidth=0, zorder=3, label="紧急购电费")
     for x, t in zip(XPOS, tot):
         ax_a.text(x, t + 18, f"{t:,.0f}", ha="center", va="bottom", fontsize=6.3,
-                  color="#1A1A1A", fontweight="bold", zorder=5)
+                  color=S.C_ACTUAL, fontweight="bold", zorder=5)
 
     ax_a.set_xlim(-0.7, 6.3)
     ax_a.set_ylim(0, 1870)
@@ -167,7 +167,7 @@ def build(D: dict[tuple[str, str], dict]) -> plt.Figure:
              edgecolor="none", linewidth=0, zorder=3, label="紧急购电费")
     for x, a_, e_ in zip(XPOS, inc_adj, inc_emg):
         ax_b.text(x, a_ + e_ + 1.2, f"{a_ + e_:.1f}", ha="center", va="bottom",
-                  fontsize=6.2, color="#1A1A1A", fontweight="bold", zorder=5)
+                  fontsize=6.2, color=S.C_ACTUAL, fontweight="bold", zorder=5)
 
     # 组级读数只留数值。原先在面板右缘写了两行「紧急费 69.9 → 15.3 万元 / −78.1%」，
     # 汉字已移入图下注；改为把降幅挂在 4-3 组正上方——有锚点的数字标签，而不是
@@ -203,7 +203,7 @@ def build(D: dict[tuple[str, str], dict]) -> plt.Figure:
               zorder=3)
     for y, v in zip(ypos, vals):
         ax_c.text(v + 0.012, y, f"{v:.2f}%", va="center", ha="left",
-                  fontsize=6.3, color="#1A1A1A", fontweight="bold", zorder=5)
+                  fontsize=6.3, color=S.C_ACTUAL, fontweight="bold", zorder=5)
     ax_c.set_xlim(0, 0.86)
     ax_c.set_ylim(-0.62, 3.62)
     ax_c.set_yticks(ypos)

@@ -94,8 +94,8 @@ STEM = "fig08_price_forecast"
 #: 正文图题（进入 LaTeX \caption{}，图内不再出现）
 CAPTION = "附件 4 电价的结构分解：价格 = 附件 1 的日内形状 + 星期几的缓慢漂移"
 
-C_FAM_A = "#A0522D"             # 族 A（周一~四+日）：残差为正（电价偏高）
-C_FAM_B = "#D8B79F"             # 族 B（周五、六）：残差为负（电价偏低）
+C_FAM_A = S.C_PRICE                # 族 A（周一~四+日）：残差为正（电价偏高）
+C_FAM_B = S.tint(S.C_PRICE, 0.58)  # 族 B（周五、六）：残差为负（电价偏低），同色浅档
 
 
 # ================================================================ 数据
@@ -206,9 +206,9 @@ def build(F, P, dates) -> plt.Figure:
         cols[k] = C_FAM_B
     ax_b.bar(xs, rbar, width=0.60, color=cols, edgecolor="none", linewidth=0,
              zorder=3)
-    ax_b.errorbar(xs, rbar, yerr=rstd, fmt="none", ecolor="#7A7A7A",
+    ax_b.errorbar(xs, rbar, yerr=rstd, fmt="none", ecolor=S.C_NEUTRAL,
                   elinewidth=0.7, capsize=1.8, capthick=0.7, zorder=4)
-    ax_b.axhline(0, color="#4D4D4D", lw=0.8, zorder=2)
+    ax_b.axhline(0, color=S.C_ACTUAL, lw=0.8, zorder=2)
     ax_b.set_xticks(xs)
     ax_b.set_xticklabels(WEEK_ZH, fontsize=6.8)
     ax_b.set_xlim(-0.62, 6.62)
@@ -233,7 +233,7 @@ def build(F, P, dates) -> plt.Figure:
     ax_c.plot(tt, h_line, color=S.C_RISK, lw=0.9, zorder=5,
               label="预测价格 P̂ = F + R̂")
     for k in range(1, n):
-        ax_c.axvline(24 * k, color="#B4B4B4", lw=0.7, ls=":", zorder=1,
+        ax_c.axvline(24 * k, color=S.tint(S.C_NEUTRAL, 0.5), lw=0.7, ls=":", zorder=1,
                      ymin=0.02, ymax=0.70)
     ax_c.set_xlim(0, 24 * n)
     # 顶部留白 26%：图例（2 行）占上沿约 16% 高度，峰价须落在图例下沿之下。

@@ -76,15 +76,8 @@ def build(data: dict) -> plt.Figure:
     d_emg = emg_risk - emg_mean             # 紧急费变化（负 = 减少）
     net = d_plan + d_emg                    # 合计变化（负 = 省）
 
-    kwh_plan_mean = mean["计划购电量_kWh"]
-    kwh_plan_risk = risk["计划购电量_kWh"]
-    kwh_emg_mean = mean["紧急购电量_kWh"]
-    kwh_emg_risk = risk["紧急购电量_kWh"]
-    r_plan = 100 * (kwh_plan_risk / kwh_plan_mean - 1)
-    r_emg = 100 * (kwh_emg_risk / kwh_emg_mean - 1)
-
-    fig = plt.figure(figsize=(S.mm2in(160), S.mm2in(96)))
-    ax = fig.add_axes((0.085, 0.19, 0.90, 0.70))
+    fig = plt.figure(figsize=(S.mm2in(160), S.mm2in(86)))
+    ax = fig.add_axes((0.095, 0.115, 0.885, 0.855))
     ax.grid(False)
 
     labels = ["预测均值策略\n（不加风险余量）", "+ 计划购电费\n（提前多买）",
@@ -118,23 +111,15 @@ def build(data: dict) -> plt.Figure:
     ax.text(2, hi2 - 24, f"{d_emg / WAN:,.0f}", ha="center", va="top",
             fontsize=7.6, color=S.C_EMERGENCY, fontweight="bold")
 
-    # 电量口径直接挂在差额柱上：证明"买得更多、却更便宜"
-    ax.text(1, lo1 - 40, f"计划购电量 {r_plan:+.1f}%", ha="center", va="top",
-            fontsize=6.5, color=S.C_GRID)
-    ax.text(2, lo2 + 34, f"紧急购电量 {r_emg:+.1f}%", ha="center", va="bottom",
-            fontsize=6.5, color=S.C_EMERGENCY)
-    ax.text(2, hi2 - 92, "5 倍电价", ha="center", va="top", fontsize=6.5,
-            color=S.C_EMERGENCY)
-
-    # 净节约：用一条带箭头的注释指出两端高度差
+    # 净节约：用一条带箭头的注释指出两端高度差。
+    # 只留数值本身，不写说明性文字——口径与"5 倍电价"等解释一律移到正文的「注」。
     ax.annotate(
         "", xy=(3.42, tot_risk / WAN), xytext=(3.42, tot_mean / WAN),
         arrowprops=dict(arrowstyle="<->", color=S.C_SAVE, lw=1.2,
                         shrinkA=0, shrinkB=0),
     )
-    ax.text(3.56, (tot_mean + tot_risk) / 2 / WAN,
-            f"净节约\n{-net / WAN:,.0f} 万元",
-            ha="left", va="center", fontsize=7.4, color=S.C_SAVE,
+    ax.text(3.56, (tot_mean + tot_risk) / 2 / WAN, f"{-net / WAN:,.0f}",
+            ha="left", va="center", fontsize=7.6, color=S.C_SAVE,
             fontweight="bold")
 
     ax.set_xticks(xs)
@@ -147,15 +132,8 @@ def build(data: dict) -> plt.Figure:
 
     S.add_panel_label(ax, "a", x=0.015, y=0.975, dx_pt=0, dy_pt=0, va="top")
 
-    fig.text(0.006, 0.945,
-             "低价确定性支出替代高价尾部风险支出", fontsize=9.6,
-             fontweight="bold", color="#1A1A1A", ha="left", va="center")
-
-    note = ("注：两策略使用同一预测器、同一实时执行规则，各自单独标定；区间为 2025-02-01 至 2025-12-31（334 天）。"
-            "起点柱与终点柱为各自全年合计费用，中间两根为两者之差。数据：06_支撑材料/p2_results.json。")
-    fig.text(0.006, 0.028, S.wrap_cjk(note, fontsize=6.2), fontsize=6.2,
-             color="#7A7A7A", ha="left", va="bottom", linespacing=1.5)
-
+    # 图内不放标题与脚注：标题与口径说明一律放在正文的 \caption 与「注」里。
+    # 见 AI1_FIGURE_REPORT.md §2 的全篇插图规范。
     return fig
 
 

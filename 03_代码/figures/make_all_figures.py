@@ -62,7 +62,8 @@ ROOT = S.ROOT
 #: 该门，避免整批中断；**单张手跑不加这个环境变量**，门照常生效，迁移到哪里就在
 #: 哪里报错——这是刻意的，别把 False 当成"这张图不用守规范"。
 FIGURES: list[tuple[str, str, float, float, bool]] = [
-    ("fig01_framework", "fig01_framework.py", 175.0, 190.0, False),
+    # fig01 收紧版面后高约 143 mm，上限给到 160 以便及早发现"又被撑开"。
+    ("fig01_framework", "fig01_framework.py", 175.0, 160.0, False),
     ("fig02_p1_dispatch", "fig02_p1_dispatch.py", 175.0, 145.0, False),
     ("fig03_q80_mechanism", "fig03_q80_mechanism.py", 175.0, 110.0, False),
     ("fig04_risk_execution", "fig04_risk_execution.py", 175.0, 150.0, False),
@@ -73,8 +74,7 @@ FIGURES: list[tuple[str, str, float, float, bool]] = [
     ("fig07_information_value", "fig07_information_value.py", 175.0, 88.0, True),
     ("fig08_price_forecast", "fig08_price_forecast.py", 175.0, 118.0, True),
     ("fig09_p4_strategy", "fig09_p4_strategy.py", 175.0, 118.0, True),
-    ("fig10_summary", "fig10_summary.py", 175.0, 92.0, True),
-]
+    ("fig10_summary", "fig10_summary.py", 175.0, 92.0, True),]
 
 
 def _run(cmd: list[str], *, env_extra: dict[str, str] | None = None) -> tuple[int, str]:

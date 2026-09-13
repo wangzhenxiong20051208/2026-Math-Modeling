@@ -6,7 +6,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-13T17:00:33.103721</dc:date>
+    <dc:date>2026-09-13T17:12:21.552542</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -41,50 +41,50 @@ z
     <g id="xtick_1">
      <g id="line2d_1">
       <defs>
-       <path id="mcc8c4a11e7" d="M 0 0 
+       <path id="m017e6880cd" d="M 0 0 
 L 0 2.5 
 " style="stroke: #4d4d4d; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#mcc8c4a11e7" x="55.75508" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#m017e6880cd" x="55.75508" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_1">
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(52.164361 217.830409)">P1</text>
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(42.15508 225.922011)">单日调度</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(52.164361 217.830409)">P1</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(42.15508 225.922011)">单日调度</text>
      </g>
     </g>
     <g id="xtick_2">
      <g id="line2d_2">
       <g>
-       <use xlink:href="#mcc8c4a11e7" x="95.665995" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#m017e6880cd" x="95.665995" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_2">
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(92.075276 217.830409)">P2</text>
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(82.065995 225.948573)">风险滚动</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(92.075276 217.830409)">P2</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(82.065995 225.948573)">风险滚动</text>
      </g>
     </g>
     <g id="xtick_3">
      <g id="line2d_3">
       <g>
-       <use xlink:href="#mcc8c4a11e7" x="135.57691" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#m017e6880cd" x="135.57691" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_3">
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(131.986191 217.830409)">P3</text>
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(118.57691 225.948573)">多预报滚动</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(131.986191 217.830409)">P3</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(118.57691 225.948573)">多预报滚动</text>
      </g>
     </g>
     <g id="xtick_4">
      <g id="line2d_4">
       <g>
-       <use xlink:href="#mcc8c4a11e7" x="175.487825" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#m017e6880cd" x="175.487825" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_4">
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(171.897106 217.830409)">P4</text>
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(161.887825 225.895448)">波动电价</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(171.897106 217.830409)">P4</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(161.887825 225.895448)">波动电价</text>
      </g>
     </g>
    </g>
@@ -92,76 +92,76 @@ L 0 2.5
     <g id="ytick_1">
      <g id="line2d_5">
       <defs>
-       <path id="m96003ae896" d="M 0 0 
+       <path id="md3039840b5" d="M 0 0 
 L -2.5 0 
 " style="stroke: #4d4d4d; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#m96003ae896" x="31.010313" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="31.010313" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_5">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="209.205995" transform="rotate(-0 25.010313 209.205995)">0</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="209.205995" transform="rotate(-0 25.010313 209.205995)">0</text>
      </g>
     </g>
     <g id="ytick_2">
      <g id="line2d_6">
       <g>
-       <use xlink:href="#m96003ae896" x="31.010313" y="173.221708" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="31.010313" y="173.221708" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_6">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="175.821805" transform="rotate(-0 25.010313 175.821805)">20</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="175.821805" transform="rotate(-0 25.010313 175.821805)">20</text>
      </g>
     </g>
     <g id="ytick_3">
      <g id="line2d_7">
       <g>
-       <use xlink:href="#m96003ae896" x="31.010313" y="139.837518" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="31.010313" y="139.837518" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_7">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="142.437616" transform="rotate(-0 25.010313 142.437616)">40</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="142.437616" transform="rotate(-0 25.010313 142.437616)">40</text>
      </g>
     </g>
     <g id="ytick_4">
      <g id="line2d_8">
       <g>
-       <use xlink:href="#m96003ae896" x="31.010313" y="106.453329" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="31.010313" y="106.453329" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_8">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="109.053426" transform="rotate(-0 25.010313 109.053426)">60</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="109.053426" transform="rotate(-0 25.010313 109.053426)">60</text>
      </g>
     </g>
     <g id="ytick_5">
      <g id="line2d_9">
       <g>
-       <use xlink:href="#m96003ae896" x="31.010313" y="73.069139" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="31.010313" y="73.069139" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_9">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="75.669237" transform="rotate(-0 25.010313 75.669237)">80</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="75.669237" transform="rotate(-0 25.010313 75.669237)">80</text>
      </g>
     </g>
     <g id="ytick_6">
      <g id="line2d_10">
       <g>
-       <use xlink:href="#m96003ae896" x="31.010313" y="39.684949" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="31.010313" y="39.684949" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_10">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="42.285047" transform="rotate(-0 25.010313 42.285047)">100</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="25.010313" y="42.285047" transform="rotate(-0 25.010313 42.285047)">100</text>
      </g>
     </g>
     <g id="text_11">
-     <text style="font-size: 8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #272727" x="8.03375" y="109.791747" transform="rotate(-90 8.03375 109.791747)">费用指数（各自朴素基线 = 100%）</text>
+     <text style="font-size: 8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #272727" x="8.03375" y="109.791747" transform="rotate(-90 8.03375 109.791747)">费用指数（各自朴素基线 = 100%）</text>
     </g>
    </g>
    <g id="line2d_11">
     <path d="M 31.010313 39.684949 
 L 200.232592 39.684949 
-" clip-path="url(#p633f1ea667)" style="fill: none; stroke-dasharray: 3.33,1.44; stroke-dashoffset: 0; stroke: #8e8e8e; stroke-width: 0.9; stroke-linecap: round"/>
+" clip-path="url(#p3366414239)" style="fill: none; stroke-dasharray: 3.33,1.44; stroke-dashoffset: 0; stroke: #8a8175; stroke-width: 0.9; stroke-linecap: round"/>
    </g>
    <g id="patch_3">
     <path d="M 31.010313 206.605897 
@@ -179,7 +179,7 @@ L 67.728354 206.605897
 L 67.728354 84.583549 
 L 43.781805 84.583549 
 z
-" clip-path="url(#p633f1ea667)" style="fill: #3f8f4f"/>
+" clip-path="url(#p3366414239)" style="fill: #4a8b2c"/>
    </g>
    <g id="patch_6">
     <path d="M 83.69272 206.605897 
@@ -187,7 +187,7 @@ L 107.639269 206.605897
 L 107.639269 50.481271 
 L 83.69272 50.481271 
 z
-" clip-path="url(#p633f1ea667)" style="fill: #e28e2c"/>
+" clip-path="url(#p3366414239)" style="fill: #e39a2a"/>
    </g>
    <g id="patch_7">
     <path d="M 123.603635 206.605897 
@@ -195,7 +195,7 @@ L 147.550184 206.605897
 L 147.550184 57.061339 
 L 123.603635 57.061339 
 z
-" clip-path="url(#p633f1ea667)" style="fill: #3775ba"/>
+" clip-path="url(#p3366414239)" style="fill: #8a7a66"/>
    </g>
    <g id="patch_8">
     <path d="M 163.51455 206.605897 
@@ -203,22 +203,22 @@ L 187.461099 206.605897
 L 187.461099 40.111161 
 L 163.51455 40.111161 
 z
-" clip-path="url(#p633f1ea667)" style="fill: #a0522d"/>
+" clip-path="url(#p3366414239)" style="fill: #b4531f"/>
    </g>
    <g id="text_12">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: start; fill: #272727" x="16.010313" y="7.535215" transform="rotate(-0 16.010313 7.535215)">a</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: start; fill: #272727" x="16.010313" y="7.535215" transform="rotate(-0 16.010313 7.535215)">a</text>
    </g>
    <g id="text_13">
-    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #1a1a1a" x="55.75508" y="32.439884" transform="rotate(-0 55.75508 32.439884)">73.1%</text>
+    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #1a1a1a" x="55.75508" y="32.439884" transform="rotate(-0 55.75508 32.439884)">73.1%</text>
    </g>
    <g id="text_14">
-    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #1a1a1a" x="95.665995" y="32.439884" transform="rotate(-0 95.665995 32.439884)">93.5%</text>
+    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #1a1a1a" x="95.665995" y="32.439884" transform="rotate(-0 95.665995 32.439884)">93.5%</text>
    </g>
    <g id="text_15">
-    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #1a1a1a" x="135.57691" y="32.439884" transform="rotate(-0 135.57691 32.439884)">89.6%</text>
+    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #1a1a1a" x="135.57691" y="32.439884" transform="rotate(-0 135.57691 32.439884)">89.6%</text>
    </g>
    <g id="text_16">
-    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #1a1a1a" x="175.487825" y="32.439884" transform="rotate(-0 175.487825 32.439884)">99.7%</text>
+    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #1a1a1a" x="175.487825" y="32.439884" transform="rotate(-0 175.487825 32.439884)">99.7%</text>
    </g>
   </g>
   <g id="axes_2">
@@ -234,23 +234,23 @@ z
     <g id="xtick_5">
      <g id="line2d_12">
       <g>
-       <use xlink:href="#mcc8c4a11e7" x="331.375066" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#m017e6880cd" x="331.375066" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_17">
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(327.784347 217.830409)">P2</text>
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(317.775066 225.948573)">风险滚动</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(327.784347 217.830409)">P2</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(317.775066 225.948573)">风险滚动</text>
      </g>
     </g>
     <g id="xtick_6">
      <g id="line2d_13">
       <g>
-       <use xlink:href="#mcc8c4a11e7" x="400.052939" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#m017e6880cd" x="400.052939" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_18">
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(396.462221 217.830409)">P3</text>
-      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(383.052939 225.948573)">多预报滚动</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(396.462221 217.830409)">P3</text>
+      <text style="font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; fill: #4d4d4d" transform="translate(383.052939 225.948573)">多预报滚动</text>
      </g>
     </g>
    </g>
@@ -258,75 +258,75 @@ z
     <g id="ytick_7">
      <g id="line2d_14">
       <g>
-       <use xlink:href="#m96003ae896" x="288.794785" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="288.794785" y="206.605897" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_19">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="209.205995" transform="rotate(-0 282.794785 209.205995)">0</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="209.205995" transform="rotate(-0 282.794785 209.205995)">0</text>
      </g>
     </g>
     <g id="ytick_8">
      <g id="line2d_15">
       <g>
-       <use xlink:href="#m96003ae896" x="288.794785" y="178.131147" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="288.794785" y="178.131147" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_20">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="180.731245" transform="rotate(-0 282.794785 180.731245)">50</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="180.731245" transform="rotate(-0 282.794785 180.731245)">50</text>
      </g>
     </g>
     <g id="ytick_9">
      <g id="line2d_16">
       <g>
-       <use xlink:href="#m96003ae896" x="288.794785" y="149.656397" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="288.794785" y="149.656397" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_21">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="152.256495" transform="rotate(-0 282.794785 152.256495)">100</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="152.256495" transform="rotate(-0 282.794785 152.256495)">100</text>
      </g>
     </g>
     <g id="ytick_10">
      <g id="line2d_17">
       <g>
-       <use xlink:href="#m96003ae896" x="288.794785" y="121.181647" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="288.794785" y="121.181647" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_22">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="123.781745" transform="rotate(-0 282.794785 123.781745)">150</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="123.781745" transform="rotate(-0 282.794785 123.781745)">150</text>
      </g>
     </g>
     <g id="ytick_11">
      <g id="line2d_18">
       <g>
-       <use xlink:href="#m96003ae896" x="288.794785" y="92.706898" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="288.794785" y="92.706898" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_23">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="95.306995" transform="rotate(-0 282.794785 95.306995)">200</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="95.306995" transform="rotate(-0 282.794785 95.306995)">200</text>
      </g>
     </g>
     <g id="ytick_12">
      <g id="line2d_19">
       <g>
-       <use xlink:href="#m96003ae896" x="288.794785" y="64.232148" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="288.794785" y="64.232148" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_24">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="66.832245" transform="rotate(-0 282.794785 66.832245)">250</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="66.832245" transform="rotate(-0 282.794785 66.832245)">250</text>
      </g>
     </g>
     <g id="ytick_13">
      <g id="line2d_20">
       <g>
-       <use xlink:href="#m96003ae896" x="288.794785" y="35.757398" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+       <use xlink:href="#md3039840b5" x="288.794785" y="35.757398" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_25">
-      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="38.357495" transform="rotate(-0 282.794785 38.357495)">300</text>
+      <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: end; fill: #4d4d4d" x="282.794785" y="38.357495" transform="rotate(-0 282.794785 38.357495)">300</text>
      </g>
     </g>
     <g id="text_26">
-     <text style="font-size: 8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #272727" x="265.818222" y="109.791747" transform="rotate(-90 265.818222 109.791747)">紧急购电费（万元）</text>
+     <text style="font-size: 8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #272727" x="265.818222" y="109.791747" transform="rotate(-90 265.818222 109.791747)">紧急购电费（万元）</text>
     </g>
    </g>
    <g id="patch_10">
@@ -345,7 +345,7 @@ L 330.688287 206.605897
 L 330.688287 52.337248 
 L 307.33781 52.337248 
 z
-" clip-path="url(#p1f1f3bd652)" style="fill: #c9c9c9"/>
+" clip-path="url(#pa7cc66f236)" style="fill: #cccac6"/>
    </g>
    <g id="patch_13">
     <path d="M 376.015684 206.605897 
@@ -353,7 +353,7 @@ L 399.366161 206.605897
 L 399.366161 70.913866 
 L 376.015684 70.913866 
 z
-" clip-path="url(#p1f1f3bd652)" style="fill: #c9c9c9"/>
+" clip-path="url(#pa7cc66f236)" style="fill: #cccac6"/>
    </g>
    <g id="patch_14">
     <path d="M 332.061845 206.605897 
@@ -361,7 +361,7 @@ L 355.412322 206.605897
 L 355.412322 163.580597 
 L 332.061845 163.580597 
 z
-" clip-path="url(#p1f1f3bd652)" style="fill: #d1495b"/>
+" clip-path="url(#pa7cc66f236)" style="fill: #c1272d"/>
    </g>
    <g id="patch_15">
     <path d="M 400.739718 206.605897 
@@ -369,28 +369,28 @@ L 424.090195 206.605897
 L 424.090195 191.062318 
 L 400.739718 191.062318 
 z
-" clip-path="url(#p1f1f3bd652)" style="fill: #d1495b"/>
+" clip-path="url(#pa7cc66f236)" style="fill: #c1272d"/>
    </g>
    <g id="text_27">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: start; fill: #272727" x="273.794785" y="7.535215" transform="rotate(-0 273.794785 7.535215)">b</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: start; fill: #272727" x="273.794785" y="7.535215" transform="rotate(-0 273.794785 7.535215)">b</text>
    </g>
    <g id="text_28">
-    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #3a3a3a" x="319.013049" y="48.656436" transform="rotate(-0 319.013049 48.656436)">271</text>
+    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #7a736a" x="319.013049" y="48.656436" transform="rotate(-0 319.013049 48.656436)">271</text>
    </g>
    <g id="text_29">
-    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #d1495b" x="343.737083" y="159.899785" transform="rotate(-0 343.737083 159.899785)">76</text>
+    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #c1272d" x="343.737083" y="159.899785" transform="rotate(-0 343.737083 159.899785)">76</text>
    </g>
    <g id="text_30">
-    <text style="font-weight: 700; font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #8c2f39" x="331.375066" y="36.0628" transform="rotate(-0 331.375066 36.0628)">−72.1%</text>
+    <text style="font-weight: 700; font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #c1272d" x="331.375066" y="36.0628" transform="rotate(-0 331.375066 36.0628)">−72.1%</text>
    </g>
    <g id="text_31">
-    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #3a3a3a" x="387.690922" y="67.233054" transform="rotate(-0 387.690922 67.233054)">238</text>
+    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #7a736a" x="387.690922" y="67.233054" transform="rotate(-0 387.690922 67.233054)">238</text>
    </g>
    <g id="text_32">
-    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #d1495b" x="412.414957" y="187.381506" transform="rotate(-0 412.414957 187.381506)">27</text>
+    <text style="font-weight: 700; font-size: 6.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #c1272d" x="412.414957" y="187.381506" transform="rotate(-0 412.414957 187.381506)">27</text>
    </g>
    <g id="text_33">
-    <text style="font-weight: 700; font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: middle; fill: #8c2f39" x="400.052939" y="54.639418" transform="rotate(-0 400.052939 54.639418)">−88.5%</text>
+    <text style="font-weight: 700; font-size: 6.8px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: middle; fill: #c1272d" x="400.052939" y="54.639418" transform="rotate(-0 400.052939 54.639418)">−88.5%</text>
    </g>
    <g id="legend_1">
     <g id="patch_16">
@@ -399,10 +399,10 @@ L 405.133221 22.159238
 L 405.133221 16.909238 
 L 395.383221 16.909238 
 z
-" style="fill: #c9c9c9"/>
+" style="fill: #cccac6"/>
     </g>
     <g id="text_34">
-     <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: start; fill: #272727" x="409.633221" y="22.159238" transform="rotate(-0 409.633221 22.159238)">朴素基线</text>
+     <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: start; fill: #272727" x="409.633221" y="22.159238" transform="rotate(-0 409.633221 22.159238)">朴素基线</text>
     </g>
     <g id="patch_17">
      <path d="M 395.383221 32.584531 
@@ -410,19 +410,19 @@ L 405.133221 32.584531
 L 405.133221 27.334531 
 L 395.383221 27.334531 
 z
-" style="fill: #d1495b"/>
+" style="fill: #c1272d"/>
     </g>
     <g id="text_35">
-     <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'STIXGeneral', 'DejaVu Sans'; text-anchor: start; fill: #272727" x="409.633221" y="32.584531" transform="rotate(-0 409.633221 32.584531)">本文做法</text>
+     <text style="font-size: 7.5px; font-family: 'Times New Roman', 'SimSun', 'SimHei', 'STIXGeneral', 'DejaVu Serif'; text-anchor: start; fill: #272727" x="409.633221" y="32.584531" transform="rotate(-0 409.633221 32.584531)">本文做法</text>
     </g>
    </g>
   </g>
  </g>
  <defs>
-  <clipPath id="p633f1ea667">
+  <clipPath id="p3366414239">
    <rect x="31.010313" y="12.977598" width="169.22228" height="193.6283"/>
   </clipPath>
-  <clipPath id="p1f1f3bd652">
+  <clipPath id="pa7cc66f236">
    <rect x="288.794785" y="12.977598" width="153.838436" height="193.6283"/>
   </clipPath>
  </defs>

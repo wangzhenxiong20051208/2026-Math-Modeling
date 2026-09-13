@@ -3,15 +3,15 @@
   "auditable": true,
   "verdict": "REVIEW REQUIRED",
   "page_count": 1,
-  "visible_text_box_count": 46,
-  "text_trace_count": 71,
+  "visible_text_box_count": 41,
+  "text_trace_count": 56,
   "stroke_path_count": 79,
   "filled_region_count": 561,
   "image_region_count": 0,
   "summary": {
     "fail": 0,
     "warn": 4,
-    "contained_fill_overlays": 12,
+    "contained_fill_overlays": 0,
     "contained_image_overlays": 0
   },
   "thresholds": {
@@ -24,109 +24,100 @@
       "severity": "WARN",
       "kind": "text-fill-edge",
       "page": 1,
-      "message": "Text partially overlaps the edge of 5 filled region(s)",
-      "text": "低谷时段占 25%，却承担 53% 购电量",
+      "message": "Text partially overlaps the edge of 2 filled region(s)",
+      "text": "a",
       "text_bbox": [
-        289.06475830078125,
-        119.71154022216797,
-        402.8606262207031,
-        126.57077026367188
+        51.05170440673828,
+        15.572935104370117,
+        55.55170440673828,
+        24.572935104370117
       ],
       "other_text": null,
       "other_bbox": [
-        309.2699279785156,
-        118.856689453125,
-        406.90771484375,
-        180.71678161621094
+        46.8337516784668,
+        15.898284912109375,
+        398.3298034667969,
+        79.93115234375
       ],
-      "object_count": 5,
+      "object_count": 2,
       "object_indexes": [
-        42000,
-        43000,
-        47000,
-        48000,
-        49000
+        1000,
+        2000
       ]
     },
     {
       "severity": "WARN",
       "kind": "text-fill-edge",
       "page": 1,
-      "message": "Text partially overlaps the edge of 4 filled region(s)",
-      "text": "低谷充电、高峰放电",
+      "message": "Text partially overlaps the edge of 2 filled region(s)",
+      "text": "b",
       "text_bbox": [
-        341.93975830078125,
-        194.17315673828125,
-        403.1397399902344,
-        200.97315979003906
+        51.05170440673828,
+        92.57246398925781,
+        56.05707550048828,
+        101.57246398925781
       ],
       "other_text": null,
       "other_bbox": [
-        314.1518249511719,
-        193.2434539794922,
-        406.90771484375,
-        255.10354614257812
+        46.8337516784668,
+        92.89779663085938,
+        398.3298034667969,
+        156.9306640625
       ],
-      "object_count": 4,
+      "object_count": 2,
       "object_indexes": [
-        220000,
-        221000,
-        226000,
-        227000
+        35000,
+        36000
       ]
     },
     {
       "severity": "WARN",
       "kind": "text-fill-edge",
       "page": 1,
-      "message": "Text partially overlaps the edge of 4 filled region(s)",
-      "text": "两端触及运行边界",
+      "message": "Text partially overlaps the edge of 2 filled region(s)",
+      "text": "c",
       "text_bbox": [
-        348.68975830078125,
-        268.6531982421875,
-        403.0897521972656,
-        275.45318603515625
+        51.05170440673828,
+        169.57199096679688,
+        55.04633331298828,
+        178.57199096679688
       ],
       "other_text": null,
       "other_bbox": [
-        314.1518249511719,
-        267.6302185058594,
-        406.90771484375,
-        332.58331298828125
+        46.8337516784668,
+        169.89732360839844,
+        398.3298034667969,
+        233.93017578125
       ],
-      "object_count": 4,
+      "object_count": 2,
       "object_indexes": [
-        542000,
-        543000,
-        548000,
-        549000
+        213000,
+        214000
       ]
     },
     {
       "severity": "WARN",
       "kind": "text-fill-edge",
       "page": 1,
-      "message": "Text partially overlaps the edge of 4 filled region(s)",
-      "text": "峰谷价差 3.8 倍",
+      "message": "Text partially overlaps the edge of 2 filled region(s)",
+      "text": "d",
       "text_bbox": [
-        355.81475830078125,
-        45.324771881103516,
-        402.7489013671875,
-        52.18400192260742
+        51.05170440673828,
+        246.61953735351562,
+        56.05707550048828,
+        255.61953735351562
       ],
       "other_text": null,
       "other_bbox": [
-        314.1518249511719,
-        44.469940185546875,
-        406.90771484375,
-        106.33001708984375
+        46.8337516784668,
+        246.8968505859375,
+        398.3298034667969,
+        314.13134765625
       ],
-      "object_count": 4,
+      "object_count": 2,
       "object_indexes": [
-        8000,
-        9000,
-        14000,
-        15000
+        535000,
+        536000
       ]
     }
   ]

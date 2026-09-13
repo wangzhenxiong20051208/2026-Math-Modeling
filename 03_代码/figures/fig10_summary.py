@@ -145,7 +145,7 @@ def build(rows: list[dict]) -> plt.Figure:
         # 柱顶只留指数一项。原先第二行还写了「(省 26.9%)」，汉字已移入图下注；
         # 读数行固定在 100% 基线之上，避免与基线相切。
         ax_a.text(x, 103.5, f"{v:.1f}%", ha="center", va="bottom", fontsize=6.5,
-                  color="#1A1A1A", fontweight="bold", zorder=5)
+                  color=S.C_ACTUAL, fontweight="bold", zorder=5)
     # 原先在左下角写「基线 = 100%」：纵轴标签已完整表述该口径
     # （费用指数（各自朴素基线 = 100%）），图内不再重复。
     ax_a.set_xlim(-0.62, 3.62)
@@ -163,17 +163,17 @@ def build(rows: list[dict]) -> plt.Figure:
     ours_e = np.array([r["ours_emg"] * WK for r in pe])
     xp = np.arange(len(pe))
     w = 0.34
-    ax_b.bar(xp - w / 2 - 0.01, base_e, w, color="#C9C9C9", edgecolor="none",
+    ax_b.bar(xp - w / 2 - 0.01, base_e, w, color=S.tint(S.C_NEUTRAL, 0.62), edgecolor="none",
              linewidth=0, zorder=3, label="朴素基线")
     ax_b.bar(xp + w / 2 + 0.01, ours_e, w, color=S.C_EMERGENCY, edgecolor="none",
              linewidth=0, zorder=3, label="本文做法")
     for x, b_, o_ in zip(xp, base_e, ours_e):
         ax_b.text(x - w / 2 - 0.01, b_ + 4, f"{b_:.0f}", ha="center", va="bottom",
-                  fontsize=6.5, color="#3A3A3A", fontweight="bold", zorder=5)
+                  fontsize=6.5, color=S.C_NEUTRAL, fontweight="bold", zorder=5)
         ax_b.text(x + w / 2 + 0.01, o_ + 4, f"{o_:.0f}", ha="center", va="bottom",
                   fontsize=6.5, color=S.C_EMERGENCY, fontweight="bold", zorder=5)
         ax_b.text(x, max(b_, o_) + 26, f"−{100 * (1 - o_ / b_):.1f}%", ha="center",
-                  va="bottom", fontsize=6.8, color="#8C2F39", fontweight="bold",
+                  va="bottom", fontsize=6.8, color=S.C_EMERGENCY, fontweight="bold",
                   zorder=5)
     ax_b.set_xlim(-0.62, len(pe) - 0.38)
     ax_b.set_ylim(0, 340)

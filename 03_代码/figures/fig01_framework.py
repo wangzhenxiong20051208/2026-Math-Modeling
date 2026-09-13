@@ -61,11 +61,18 @@ X_STAGE_L, X_STAGE_R = 8.0, 44.0      # 流程框横向范围（36 单位 = 58 m
 X_GRID0, DX_COL = 55.5, 11.2          # 归属网格首列中心与列距
 X_GRID_R = X_GRID0 + 3 * DX_COL       # 末列中心
 
-Y_TITLE = 96.0
 Y_HDR1, Y_HDR2 = 88.5, 85.0           # 列头两行（第三行为 Y_HDR2-2.7）
 Y_ROW0, DY_ROW = 79.0, 4.0            # 首行中心与行距
 Y_BLOCK2 = 35.5                       # 下块标题
 Y_LAD0, DY_LAD = 26.5, 6.8            # 下块首行中心与行距
+
+#: 画布纵向**可视**范围。内容实际落在 y ∈ [3.62, 89.44]（把每个 ax.text 的
+#: window_extent 用 transData 反算得到，非目测），故上下各留约 1 个单位余量。
+#: 原先沿用 0–100 会在顶部留下 17 mm 空白——那是删掉大标题后残留的版面余量。
+#: 画布高度按同一比例缩小，**1 个 y 单位仍等于 1.62 mm**，因此所有文字与图元的
+#: 物理尺寸完全不变，被剪掉的只有空白。
+Y_VIEW_LO, Y_VIEW_HI = 2.42, 90.94
+FIG_H_MM = 162.0 * (Y_VIEW_HI - Y_VIEW_LO) / 100.0
 
 DOT_MS = 5.0
 BOX_HH = 1.65                         # 流程框半高
@@ -138,18 +145,14 @@ def build() -> plt.Figure:
     """绘制 Fig.1。单幅画布、无坐标轴（对齐门判定为 NOT APPLICABLE）。"""
     S.apply_style()
 
-    fig = plt.figure(figsize=(S.mm2in(160), S.mm2in(175)))
+    fig = plt.figure(figsize=(S.mm2in(160), S.mm2in(FIG_H_MM)))
     ax = fig.add_axes((0.006, 0.006, 0.988, 0.988))
     ax.set_xlim(0, 100)
-    ax.set_ylim(0, 100)
+    ax.set_ylim(Y_VIEW_LO, Y_VIEW_HI)
     ax.axis("off")
 
     # ============================================================ 上块：标题
-    ax.text(3.0, Y_TITLE, "统一建模框架与四问递进关系", fontsize=11.0,
-            fontweight="bold", color="#1A1A1A", ha="left", va="center")
-    ax.text(3.0, Y_TITLE - 3.5,
-            "同一个闭环模型，四问逐层叠加信息与不确定性处理能力",
-            fontsize=S.FS_ANNOT, color="#767676", ha="left", va="center")
+    # 大标题与副标题不进图：放在正文的 \caption 里（全篇插图规范）。
 
     # ============================================================ 上块：列头
     for j, (tag, d1, d2) in enumerate(PROBLEMS):
@@ -167,7 +170,7 @@ def build() -> plt.Figure:
         introduced = bool(mask[0])
 
         _rounded(ax, X_STAGE_L, yc - BOX_HH, X_STAGE_R, yc + BOX_HH,
-                 edgecolor=color if introduced else "#A8B2BE",
+                 edgecolor=color if introduced else "#B3AAA0",
                  linewidth=1.0 if introduced else 0.65)
 
         ax.text(X_STAGE_L + BOX_PAD_X, yc, name, fontsize=7.2,
@@ -223,9 +226,6 @@ def build() -> plt.Figure:
     # ============================================================ 下块：目标阶梯
     ax.text(3.0, Y_BLOCK2 - 1.0, "目标函数逐层新增的项", fontsize=8.6,
             fontweight="bold", color="#1A1A1A", ha="left", va="center")
-    ax.text(3.0, Y_BLOCK2 - 4.4,
-            "条带长度随问题序号增长；条带右侧为该问在上一问基础上新增的部分",
-            fontsize=6.3, color="#8A8A8A", ha="left", va="center")
 
     for i, (tag, expr, note, bar_len, color) in enumerate(LADDER):
         yc = Y_LAD0 - i * DY_LAD
@@ -249,10 +249,7 @@ def build() -> plt.Figure:
                 color=color, ha="left", va="center")
 
     # ============================================================ 图注
-    ax.text(3.0, 1.5,
-            "实心圆 = 该问题具备此环节，空心圆 = 尚未引入。"
-            "左侧青色回路为跨日滚动：日末实际储电量回传次日预测。",
-            fontsize=6.3, color="#8A8A8A", ha="left", va="center")
+    # 圆点含义与回路说明不进图：放在正文的「注」里。
 
     return fig
 

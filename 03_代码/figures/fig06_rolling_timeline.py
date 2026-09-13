@@ -99,8 +99,12 @@ STEM = "fig06_rolling_timeline"
 #: 正文图题（进入 LaTeX \caption{}，图内不再出现）
 CAPTION = "问题三的滚动决策时间轴：新预报只改变未来，已提交的 6 h 交付块永久冻结"
 
-C_FROZEN = "#D6D6D6"        # 已执行并冻结（灰）
-C_PROVISIONAL = "#BFD4EA"   # 本轮优化出的暂定方案（浅蓝），将被后续发布覆盖
+# 与 S.C_REF（暖灰 = 参考/边界）、S.C_GRID（墨绿 = 日前计划）**同族派生**，只改明度：
+# 冻结块是"已经定下来、不可回改"的旧信息，暂定块是同一条计划曲线的浅色档。这样
+# 换主调时深浅两档跟着 token 走 —— 旧版写死 "#D6D6D6" / "#BFD4EA"（浅蓝），
+# 主调换暖色后这两档就成了全文唯一的蓝紫残留。
+C_FROZEN = S.tint(S.C_REF, 0.62)          # 已执行并冻结（暖灰浅色）
+C_PROVISIONAL = S.tint(S.C_GRID, 0.45)    # 本轮优化出的暂定方案（浅绿），待下次覆盖
 
 
 def load_skill() -> dict[str, float]:
@@ -167,7 +171,7 @@ def build(skill: dict[str, float], z, blocks: np.ndarray) -> plt.Figure:
 
     # 交付块边界：只画在数据带内（贯穿整幅会穿过图例文字 → text-stroke）
     ax_a.vlines([6, 12, 18], Y_LO + 0.10, n_rows - 1 + H / 2 + 0.05,
-                color="#9A9A9A", lw=0.8, ls=":", zorder=1)
+                color=S.C_NEUTRAL, lw=0.8, ls=":", zorder=1)
 
     for h in RELEASES:
         y = y_of[h]
@@ -192,7 +196,7 @@ def build(skill: dict[str, float], z, blocks: np.ndarray) -> plt.Figure:
 
     for h in RELEASES:
         ax_a.text(24.25, y_of[h], f"MAE {skill[f'{h}:00']:.0f} kW",
-                  ha="left", va="center", fontsize=6.6, color="#5A5A5A")
+                  ha="left", va="center", fontsize=6.6, color=S.C_NEUTRAL)
     ax_a.set_xlim(0, 28.6)          # 右侧留出 MAE 标注带
 
     ax_a.legend(handles=[
@@ -201,7 +205,7 @@ def build(skill: dict[str, float], z, blocks: np.ndarray) -> plt.Figure:
         Patch(facecolor=C_PROVISIONAL, edgecolor="none", label="暂定方案（待下次覆盖）"),
     ], loc="upper left", bbox_to_anchor=(0.0, 1.0), ncol=3,
         handlelength=1.3, columnspacing=1.3, borderaxespad=0.0,
-        labelcolor="#333333")
+        labelcolor=S.C_ACTUAL)
 
     S.add_panel_label(ax_a, "a", x=0.0, y=1.0, dx_pt=-14, dy_pt=3.5, va="bottom")
 
@@ -230,7 +234,7 @@ def build(skill: dict[str, float], z, blocks: np.ndarray) -> plt.Figure:
              linewidth=0, zorder=3)
     S.zero_line(ax_b, zorder=4)
     for xb in (6, 12, 18):
-        ax_b.axvline(xb, ymin=0.02, ymax=0.98, color="#9A9A9A", lw=0.8,
+        ax_b.axvline(xb, ymin=0.02, ymax=0.98, color=S.C_NEUTRAL, lw=0.8,
                      ls=":", zorder=1)
     S.add_panel_label(ax_b, "b", x=0.0, y=1.0, dx_pt=-14, dy_pt=3.5, va="bottom")
 
@@ -251,10 +255,10 @@ def build(skill: dict[str, float], z, blocks: np.ndarray) -> plt.Figure:
         v = blocks[k] / 1e3
         if v < 1e-9:
             ax_c.text(k, vmax * 0.018, "0.000", ha="center", va="bottom",
-                      fontsize=7.0, color="#B03A2E", fontweight="bold")
+                      fontsize=7.0, color=S.C_LOSS, fontweight="bold")
         else:
             ax_c.text(k, v + vmax * 0.02, f"{v:,.0f}", ha="center", va="bottom",
-                      fontsize=6.8, color="#1F1F1F", fontweight="bold")
+                      fontsize=6.8, color=S.C_ACTUAL, fontweight="bold")
 
     S.add_panel_label(ax_c, "c", x=0.0, y=1.0, dx_pt=-14, dy_pt=3.5, va="bottom")
 
