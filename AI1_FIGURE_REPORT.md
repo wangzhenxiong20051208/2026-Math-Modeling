@@ -55,21 +55,86 @@ AI-2 做 Fig.6–Fig.10 时**不要**自己定义颜色、字号、线宽或图�
 
 ### 1.2 统一参数
 
-- **字体**：`font.family = ['Arial', 'Microsoft YaHei', 'DejaVu Sans']`
-  （拉丁走 Arial、中文回退雅黑）
+- **字体**：`font.family = ['Times New Roman', 'SimSun', 'SimHei', 'DejaVu Serif']`
+  （拉丁与数字走 **Times New Roman**、中文走 **宋体**、粗体中文走 **黑体**）
+- **数学字体**：`mathtext.fontset = 'cm'`（Computer Modern）
 - **字号**：刻度 7.5 / 轴标签 8 / 标注 8 / panel 字母 9（粗体）；**任何字号 ≥ 7.5 pt**
 - **图幅**：`FIG_W_FULL = 160 mm`（正文版心宽）、`FIG_W_HALF = 78 mm`
 - **导出**：`S.save_figure(fig, "<stem>")` → 自动跑对齐门，输出
   `04_图/pdf/<stem>.pdf`（矢量，主）、`.svg`（可编辑矢量）、`04_图/<stem>.png`（300 dpi 预览）
 
-### 1.3 五个必须遵守的坑（都是实测踩出来的，AI-2 直接照做即可）
+#### 1.2.1 字体选型依据（2026-09-13 定稿）
+
+选 **Times New Roman + 宋体**，不是审美偏好，而是**与论文正文对齐**。直接读论文
+成品 PDF（`05_论文/final_new/main.pdf`）嵌入的字体表得到：
+
+| 用途 | 论文实际嵌入字体 | 图中采用 | 是否一致 |
+|---|---|---|---|
+| 拉丁 / 数字 | `TimesNewRomanPSMT`（+Bold/Italic） | Times New Roman | ✅ 完全一致 |
+| 中文正文 | `FandolSong`（宋体）+ Bold | SimSun（宋体） | ✅ 同类（见下） |
+| 中文强调 | `FandolHei`（黑体）+ Bold | SimHei（黑体） | ✅ 同类 |
+| 数学公式 | `CMR` / `CMMI` / `CMSY`（Computer Modern） | `mathtext.fontset='cm'` | ✅ 同源 |
+
+三点说明：
+
+1. **中文用 SimSun 而非论文的 FandolSong**：两者同属宋体，字形设计略有差异。
+   Fandol 随 TeX Live 分发、**没有注册进系统字体表**，matplotlib 找不到它；
+   SimSun 是 Windows 标准宋体，可用性有保证。差异在 6–8 pt 下不可辨。
+2. **数学字体必须是 `cm`**。曾误设为 `dejavusans`（与 Arial 时期配套）和 `stix`
+   （Times 家族），两者都与正文公式**不同源**，图里的目标函数式会像从别处贴来的。
+3. **粗体中文走黑体**，见 §1.4 第 6 条——宋体没有粗体字形，这是必需的补偿。
+
+### 1.3 图内不放文字（2026-09-13 新增硬规范，AI-2 必须遵守）
+
+**图片里不出现标题、结论句与脚注。** 图内只保留：
+
+- 坐标轴标签与**刻度数字**
+- panel 字母 `a` `b` `c` `d`
+- **图例**（含图例条目里的数值）
+- 直接标在数据点上的**数值**
+
+**一律移到正文**（`\caption{}` 与图后的「注：」）：
+
+- 顶部大标题、副标题
+- 一切结论性、解释性、推导性的句子（例："低谷时段占 25%，却承担 53% 购电量"）
+- 口径说明、数据来源、数学限定
+
+Fig.1–Fig.5 的成稿标题与注见 **`05_论文/插图标题与注_fig01-05.tex`**，可直接粘贴。
+
+**执行要点**：原本写在轴内的结论句，若它承担"指认哪条线是哪个量"的功能
+（如 Fig.3 的两条边际成本曲线），必须**改写成图例**，不能直接删——否则读者
+分不清曲线。若它只是解释性文字，直接移进「注」即可，内容不要丢。
+
+**副作用提醒**：这条规范会让图**丧失自解释性**——单看图不知道是哪一天、
+哪些点算超出。所以「注」必须写足，且正文引用时要指明 panel，例如
+"如图 4(c) 所示"。
+
+### 1.4 六个必须遵守的坑（都是实测踩出来的，AI-2 直接照做即可）
 
 1. **中文回退只能写 `font.family` 列表**，写 `font.sans-serif` 列表**无效**——
    汉字会静默变成豆腐块且不报错。已由 `_font_probe.py` 做像素级校验。
 2. **含 `$...$` 的字符串不得夹中文**。mathtext 不走 font 回退链，中文会变 dummy
    symbol。中文与公式必须是两个独立的 text 对象。
-3. **Arial 缺 `₀ ₈ ₊ ∈ ⋅` 等字形**。已确认可用：`− ≤ · × → ≥ ≈`。建议全图
-   不用 mathtext，直接写普通 Unicode。
+3. **特殊字符的可渲染范围随字体变过，已按新回退链重新实测**（回退链 =
+   Times New Roman → SimSun → SimHei → DejaVu Serif）：
+
+   | 情况 | 字符 |
+   |---|---|
+   | Times 原生覆盖（首选） | `₀ ₈ ₊ ₋ × → ≈ ≤ ≥ − ± ° α β γ ε ρ τ ξ σ Δ Ω ∑ √ ∞` |
+   | 回退到宋体（轻微混排） | `∈` |
+   | 只能回退到 DejaVu Serif（**风格明显不搭，全图禁用**） | `⋅`(U+22C5) |
+
+   注意**下标 `₀ ₈` 现在可用了**——旧 Arial 没有这两个字形，Fig.3 当初因此把
+   `Q₀.₈` 改写成了 `Q0.8`。需要点号请用 `·`(U+00B7，Times 原生支持)。
+   图内仍建议不用 mathtext、直接写普通 Unicode，但**用之前先查上表**。
+
+6. **宋体没有粗体字形，不能直接依赖 `fontweight="bold"`**。实测
+   `findfont(SimSun, weight=700)` 返回的仍是 `simsun.ttc` 常规体——matplotlib
+   既不报错也不回退，粗体中文会**静默**退化成常规体。`figstyle.apply_style()`
+   已自动把黑体注册为宋体的粗体面，因此**调用方照常写 `fontweight="bold"` 即可**，
+   中文会落到黑体（`simhei.ttf`）、拉丁仍落到 Times Bold。
+   验证方式：`python 03_代码/figures/_font_coverage.py`，它会打印粗体中文实际
+   承接的**字体文件**；若显示 `simsun.ttc` 即为失效。
 4. **关掉网格（`ax.grid(False)`）再放轴内文字**。matplotlib 的网格线是贯穿整幅
    panel 的描边路径，会穿过几乎所有轴内文字，碰撞审计一律判 `text-stroke`。
 5. **`axvspan` / `fill_between` / `bar` 必须显式 `edgecolor="none"`**。只写
@@ -116,8 +181,9 @@ AI-2 做 Fig.6–Fig.10 时**不要**自己定义颜色、字号、线宽或图�
 | **输出文件** | `04_图/pdf/fig02_p1_dispatch.pdf`、`.svg`、`04_图/fig02_p1_dispatch.png` |
 | **是否需要论文正文修改** | **建议替换**三张旧图的引用为这一张。若暂不改正文，本图可先作为附录或问题一开篇总图。 |
 
-**图上带出的真实数量**（均由数据算出，非手写）：峰谷价差 3.8 倍；
-低谷时段占全天 25%，却承担 53% 的购电量；SOC 两端触及 1200 / 10800 运行边界。
+**图上原本的结论句已按「图内不放文字」规范移入正文「注」**（峰谷价差 3.8 倍、
+低谷时段占 25% 却承担 53% 购电量、SOC 两端触及 1200 / 10800 边界），
+数值均由数据算出、非手写，内容无丢失。
 
 ---
 
@@ -135,11 +201,12 @@ AI-2 做 Fig.6–Fig.10 时**不要**自己定义颜色、字号、线宽或图�
 **⚠️ 数学忠实性（重要，请勿改图）**
 - 分位数结论**只在忽略储能与跨时段耦合时严格成立**。论文自己也是把它当作
   **参数搜索的起点**，最终由连续运行总费用标定（8 轮标定落在 α∈[0.70,0.90]，0.75 最多）。
-  **图中脚注原样保留了这一限定**，请勿删——否则会误导读者以为模型就是"按 Q0.8 采购"。
+  **该限定已写入正文「注」（见 `05_论文/插图标题与注_fig01-05.tex` 图 3），
+  请勿删——否则会误导读者以为模型就是"按 Q0.8 采购"。**
 - 该结论**不依赖任何分布假设**（论文 §2.2 原话）。故 (a) 的经验分布只是形状示例，
-  脚注已写明这一点。
+  「注」已写明这一点。
 - 模型内部是**逐时段 28 天窗口**分位数；本图为讲解机制把全区间样本汇总成一条分布，
-  差异已在脚注注明。
+  差异已在「注」中注明。
 
 ---
 
@@ -208,7 +275,10 @@ fig05_cost_waterfall碰撞 PASS            字形 6.20 pt PASS   对齐 NOT APPL
 **关于静态预检 `validate_figure.py` 的 4 项 FAIL**：该工具是正则扫描器，
 不跟随 import，因此看不到定义在 `figstyle.py` 里的字体、可编辑文本设置，
 也看不到 `save_figure()` 内部调用的对齐门。**均为工具误报**，实证如下：
-- 字体回退：`_font_probe.py` 像素级校验通过（中文墨量 0.046 vs 豆腐块基线 0.006）
+- 字体回退：`_font_probe.py` 像素级校验通过（中文墨量 0.0248 vs 豆腐块基线 0.0058，
+  4.3 倍；拉丁墨量与 Times New Roman 完全相等，证实拉丁走 Times）
+- 字形覆盖：`_font_coverage.py` 通过（五张图全部字形零缺失；回退链实际只用到
+  Times New Roman 与 SimSun 两家，未触发任何兜底字体）
 - 可编辑文本：`audit_pdf_text.py` 能逐条读出 PDF 文本，证明确为 TrueType 可编辑文字
 - 对齐门：`04_图/qa/*.alignment.json` 均已生成且 `verdict: PASS`
 
@@ -225,7 +295,8 @@ fig05_cost_waterfall碰撞 PASS            字形 6.20 pt PASS   对齐 NOT APPL
   fig04_risk_execution.py      ← Fig.4
   fig05_cost_waterfall.py      ← Fig.5
   make_all_figures.py          ← 一键重出全部图 + 全量 QA
-  _font_probe.py               ← 中文字体回退校验（QA 工具）
+  _font_probe.py               ← 中文字体回退像素级校验（QA 工具）
+  _font_coverage.py            ← 逐字形 cmap 覆盖 + 粗体中文承接文件校验（QA 工具）
   audit_panel_alignment.py     ← 对齐门（技能自带，随脚本放置以便 import）
   audit_figure_collisions.py   ← 碰撞审计
   audit_pdf_text.py            ← 字形下限审计
@@ -251,7 +322,12 @@ fig05_cost_waterfall碰撞 PASS            字形 6.20 pt PASS   对齐 NOT APPL
 4. **非常规布局**（不等宽 `width_ratios`、跨行 hero、inset、colorbar）必须把
    `alignment={...}` 传给 `save_figure` 显式分组或申请豁免，**不要**放宽容差。
 5. **把新脚本追加到 `make_all_figures.py` 的 `FIGURES` 列表**，即自动纳入全量 QA。
-6. 遵守 §1.3 的五个坑；长说明用 `S.wrap_cjk(text, fontsize=...)` 折行。
+6. 遵守 §1.4 的五个坑；长说明用 `S.wrap_cjk(text, fontsize=...)` 折行。
+7. **图内不放标题/结论句/脚注**（§1.3）——只留坐标轴、刻度数字、panel 字母、
+   图例与数据点数值；其余写进正文的 `\caption` 与「注」。
+
+**AI-2 可直接复用的成果**：`05_论文/插图标题与注_fig01-05.tex` 是 Fig.1–5 的
+成稿图题与「注」，可照此格式为 Fig.6–10 撰写。
 
 **AI-2 可安全使用的既有资源**：`06_支撑材料/` 下的全部 CSV/JSON 都是模型真实输出，
 只读引用即可（`p3_forecast_skill.csv`、`p3_alignment_scan.json`、`p4_price_scan.json`、

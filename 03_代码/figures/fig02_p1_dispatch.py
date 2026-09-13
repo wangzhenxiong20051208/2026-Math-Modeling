@@ -62,7 +62,6 @@ BAND_HIGH = "#F5E7E0"
 
 #: 轴内文本位置（axes fraction）
 XY_LABEL = (0.012, 0.985)     # panel 字母（轴内左上）
-XY_CLAIM = (0.988, 0.985)     # 本 panel 结论（轴内右上）
 
 
 def hours(n: int) -> np.ndarray:
@@ -82,12 +81,6 @@ def contiguous_runs(mask: np.ndarray) -> list[tuple[int, int]]:
     if start is not None:
         runs.append((start, len(mask)))
     return runs
-
-
-def _claim(ax, text: str, color: str) -> None:
-    """在轴内右上角写本 panel 的结论（与左上角字母分处两端）。"""
-    ax.text(*XY_CLAIM, text, transform=ax.transAxes, ha="right", va="top",
-            fontsize=6.8, color=color, fontweight="bold")
 
 
 def build(df: pd.DataFrame) -> plt.Figure:
@@ -111,7 +104,7 @@ def build(df: pd.DataFrame) -> plt.Figure:
     high_runs = contiguous_runs(price >= hi_thr)
 
     fig, axes = plt.subplots(
-        4, 1, figsize=(S.mm2in(160), S.mm2in(132)), sharex=True,
+        4, 1, figsize=(S.mm2in(160), S.mm2in(126)), sharex=True,
         gridspec_kw={"height_ratios": [1.0, 1.0, 1.0, 1.05], "hspace": 0.20},
     )
     ax_p, ax_b, ax_c, ax_s = axes
@@ -137,7 +130,6 @@ def build(df: pd.DataFrame) -> plt.Figure:
     ax_p.set_ylim(price.min() * 0.84, price.max() * 1.22)
     S.add_panel_label(ax_p, "a", x=XY_LABEL[0], y=XY_LABEL[1],
                       dx_pt=0, dy_pt=0, va="top")
-    _claim(ax_p, f"峰谷价差 {price.max() / price.min():.1f} 倍", S.C_PRICE)
     # 低谷/高峰窗口不在轴内写字：电价折线恰好穿过窗口所在的 y 区间，
     # 任何贴线标注都会被折线穿过（碰撞审计判 text-stroke）。改由整图图例说明。
 
@@ -147,10 +139,6 @@ def build(df: pd.DataFrame) -> plt.Figure:
     ax_b.set_ylim(0, buy.max() * 1.32)
     S.add_panel_label(ax_b, "b", x=XY_LABEL[0], y=XY_LABEL[1],
                       dx_pt=0, dy_pt=0, va="top")
-    low_slot = 100 * float((price <= lo_thr).mean())
-    low_kwh = 100 * float(buy[price <= lo_thr].sum() / buy.sum())
-    _claim(ax_b, f"低谷时段占 {low_slot:.0f}%，却承担 {low_kwh:.0f}% 购电量",
-           S.C_GRID)
 
     # ---------------------------------------------------------- (c) 充放电量
     ax_c.bar(t, chg, width=dt * 0.94, color=S.C_CHARGE, alpha=0.92, lw=0)
@@ -163,7 +151,6 @@ def build(df: pd.DataFrame) -> plt.Figure:
                       dx_pt=0, dy_pt=0, va="top")
     # 制度说明写在轴内右上角：充电集中在日出前，若把标签放在低谷窗口中心会正好
     # 撞上轴内左上角的 panel 字母。绿/紫两色本身已把充电与放电分开。
-    _claim(ax_c, "低谷充电、高峰放电", S.C_CHARGE)
 
     # ---------------------------------------------------------- (d) 储电量
     ax_s.plot(t_soc, soc, color=S.C_SOC, lw=1.9, zorder=4)
@@ -179,7 +166,6 @@ def build(df: pd.DataFrame) -> plt.Figure:
     ax_s.set_ylabel("储电量 (kWh)\n运行区间 1200–10800")
     S.add_panel_label(ax_s, "d", x=XY_LABEL[0], y=XY_LABEL[1],
                       dx_pt=0, dy_pt=0, va="top")
-    _claim(ax_s, "两端触及运行边界", S.C_SOC)
 
     from matplotlib.patches import Patch
     handles = [Patch(facecolor=BAND_LOW, edgecolor="none",
@@ -187,12 +173,13 @@ def build(df: pd.DataFrame) -> plt.Figure:
                Patch(facecolor=BAND_HIGH, edgecolor="none",
                      label=f"高峰窗口（电价 ≥{hi_thr:.3f} 元/kWh）")]
     # 图例另起一行排在标题下方：标题很长，与图例同处一行会直接压字。
-    fig.legend(handles=handles, loc="upper right", bbox_to_anchor=(0.995, 0.958),
+    fig.legend(handles=handles, loc="upper right", bbox_to_anchor=(0.995, 0.995),
                ncol=2, fontsize=6.8, frameon=False, handlelength=1.2,
                columnspacing=1.4)
 
-    fig.suptitle("低价购电 → 储能充电 → 高价放电：确定性调度的套利机制",
-                 fontsize=10.2, fontweight="bold", y=0.995, x=0.006, ha="left")
+    # 图内不放标题与结论句：一律移到正文的 \caption 与「注」。
+    # 图内只保留坐标轴、刻度数字、panel 字母与图例（全篇插图规范）。
+    fig.subplots_adjust(top=0.945)
     return fig
 
 

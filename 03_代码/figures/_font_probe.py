@@ -66,14 +66,15 @@ def main() -> int:
 
     baseline = _ink_fraction([_REFERENCE_LACKING_CJK], _PROBE_TEXT)
     configured = _ink_fraction(configured_families, _PROBE_TEXT)
+    # 拉丁一致性基线随配置走：Latin 该由 FONT_LATIN 承接，而不是写死 Arial。
     latin = _ink_fraction(configured_families, "Hamburgefonstiv 0123")
-    latin_ref = _ink_fraction([_REFERENCE_LACKING_CJK], "Hamburgefonstiv 0123")
+    latin_ref = _ink_fraction([S.FONT_LATIN], "Hamburgefonstiv 0123")
 
     print(f"字体族列表        : {configured_families}")
     print(f"豆腐块基线墨量    : {baseline:.5f}   ({_REFERENCE_LACKING_CJK}，已知无汉字)")
     print(f"当前配置汉字墨量  : {configured:.5f}")
-    print(f"拉丁字形一致性    : 当前 {latin:.5f} vs Arial {latin_ref:.5f} "
-          f"({'一致，确认拉丁走 Arial' if abs(latin - latin_ref) < 1e-4 else '不一致'})")
+    print(f"拉丁字形一致性    : 当前 {latin:.5f} vs {S.FONT_LATIN} {latin_ref:.5f} "
+          f"({'一致，确认拉丁走 ' + S.FONT_LATIN if abs(latin - latin_ref) < 1e-4 else '不一致'})")
 
     ok = configured > _INK_THRESHOLD and configured > baseline * 3
     print(f"判定              : {'中文回退正常' if ok else '中文回退失效（汉字为豆腐块）'}")

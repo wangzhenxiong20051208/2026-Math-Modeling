@@ -61,7 +61,6 @@ DAY_EMERG = "2025-09-23"      # 秋分
 
 BAND_EXCEED = "#F7E3E1"       # 超出风险净负荷的时段底纹
 XY_LABEL = (0.020, 0.968)
-XY_CLAIM = (0.985, 0.968)
 
 
 def read_rho() -> float:
@@ -74,11 +73,6 @@ def read_rho() -> float:
     except (KeyError, FileNotFoundError, IndexError):
         pass
     return 0.9
-
-
-def _claim(ax, text: str, color: str) -> None:
-    ax.text(*XY_CLAIM, text, transform=ax.transAxes, ha="right", va="top",
-            fontsize=6.6, color=color, fontweight="bold")
 
 
 def hours(n: int) -> np.ndarray:
@@ -176,32 +170,35 @@ def build(det: pd.DataFrame, rho: float) -> plt.Figure:
                 ax_s.axvspan(t[a], t[b - 1] + dt, facecolor=S.C_EMERGENCY,
                              alpha=0.20, edgecolor="none", linewidth=0, zorder=1)
 
-    # ---------------------------------------------------------- 结论标注
-    st_a, st_e = stats["absorb"], stats["emerg"]
-
-    _claim(ax_na, f"冬至 12-21：{st_a['n_ex']} 个时段超出", S.C_ACTUAL)
-    _claim(ax_sa, f"储能未触底 → 紧急购电 = 0", S.C_SOC)
-    _claim(ax_ne, f"秋分 09-23：{st_e['n_ex']} 个时段超出", S.C_ACTUAL)
-    _claim(ax_se, f"储能触底 → {st_e['n_emg']} 个时段紧急购电", S.C_EMERGENCY)
-
-    # 日期与日期对照写在 panel 结论里，**不另设行标题**：行间那点空隙被上下两行
-    # 绘图区占满，任何夹在中间的整行文字都会被曲线穿过（早期版本即为此）。
-    # 底纹含义放进脚注，避免在绘图区底部再压一行字（底部正是曲线回落的区间）。
+    # ---------------------------------------------------------- 共享图例
+    # 结论句（哪一天、超出多少时段、储能是否触底）一律移出图片，写进正文的
+    # 「注」；图内只留坐标轴、刻度数字、panel 字母与图例（全篇插图规范）。
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    fig.legend(
+        handles=[
+            Line2D([], [], color=S.C_RISK, lw=1.4, label="风险修正净负荷"),
+            Line2D([], [], color=S.C_ACTUAL, lw=1.4, label="实际净负荷"),
+            Line2D([], [], color=S.C_SOC, lw=1.8, label="储电量"),
+            Line2D([], [], color=S.C_REF, lw=1.1, ls="--", label="储备线 R"),
+            Patch(facecolor=BAND_EXCEED, edgecolor="none",
+                  label="实际 > 风险净负荷的时段"),
+            Patch(facecolor=S.C_EMERGENCY, alpha=0.20, edgecolor="none",
+                  label="紧急购电时段"),
+        ],
+        loc="upper left", bbox_to_anchor=(0.006, 0.995), ncol=3, fontsize=6.4,
+        frameon=False, handlelength=1.6, columnspacing=1.8, labelspacing=0.35)
 
     # 四个 panel 共用同一条时间轴，逐幅挂 x 轴标签既冗余、又会被刻度笔画穿过；
     # 改为在绘图区下方挂**一个**共享标签，位置显式给定，不参与 axes 布局。
-    fig.text(0.5, 0.090, "时刻 (h)", ha="center", va="center",
+    fig.text(0.5, 0.038, "时刻 (h)", ha="center", va="center",
              fontsize=S.FS_LABEL, color="#272727")
-
-    note = ("注：两天都出现了「实际 > 风险净负荷」，差别只在储能余量——真正的触发机制是"
-            "「超出风险余量的部分」与「储能剩余可放能力」之差。浅红底纹 = 实际净负荷 > 风险净负荷；"
-            f"红色带 = 紧急购电时段。储备线 R = 1200 + ρ(Ē − 1200)，ρ = {rho:.1f} 读自标定结果。")
-    fig.text(0.006, 0.006, S.wrap_cjk(note, fontsize=6.2), fontsize=6.2, color="#7A7A7A",
-             ha="left", va="bottom", linespacing=1.5)
 
     # rect = (left, bottom, width, height)，四者之和不得超过 1（早期写成
     # height=0.985 而 bottom=0.105，顶端越界，对齐门直接报 ERROR 并阻断导出）。
-    fig.get_layout_engine().set(rect=(0.008, 0.160, 0.984, 0.828))
+    # 顶部留出独立的一条图例带（top=0.105+0.820=0.925），否则图例第二行
+    # 会贴住 panel (a) 的最高一条 y 刻度数字。
+    fig.get_layout_engine().set(rect=(0.008, 0.105, 0.984, 0.820))
     return fig
 
 

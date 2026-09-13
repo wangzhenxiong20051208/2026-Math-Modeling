@@ -39,9 +39,15 @@ Fig.3  问题二核心机制：为什么风险分位数落在 0.8
 
 排版约束
 --------
-**全图不使用 mathtext。** Arial 缺下标字形 ₀/₈（U+2080/2088），而含 `$...$` 的
-字符串又会绕过 font.family 回退链把中文变成 dummy symbol；故一律改用普通
-Unicode 字符（− ≤ · 等均已确认 Arial 与雅黑同时支持）。
+**全图不使用 mathtext。** 含 `$...$` 的字符串会绕过 font.family 回退链，把中文
+变成 dummy symbol；故一律改用普通 Unicode 字符。
+
+字体已在 2026-09-13 改为 Times New Roman + 宋体。副作用之一是**可用的字形变多了**：
+下标 ₀ ₈（U+2080/2088）旧字体 Arial 没有，故当时把图例写成 `Q0.8`；Times New
+Roman 原生支持这两个字形，理论上现在可以写成 `Q₀.₈`。
+**本图暂时仍用 `Q0.8`**——6.4 pt 下 Unicode 下标会缩得很小而影响可读性，且正文
+「注」中同样写作 Q0.8，两边必须保持一致。若要改，须连同
+`05_论文/插图标题与注_fig01-05.tex` 一起改。
 
 输出
 ----
@@ -66,12 +72,6 @@ PRICE_RATIO = 5.0       # 紧急购电 / 正常购电 = 5
 N_BINS = 90
 
 XY_LABEL = (0.022, 0.972)
-XY_CLAIM = (0.988, 0.978)
-
-
-def _claim(ax, text: str, color: str) -> None:
-    ax.text(*XY_CLAIM, text, transform=ax.transAxes, ha="right", va="top",
-            fontsize=6.9, color=color, fontweight="bold")
 
 
 def _wrap_cjk(text: str, per_line: int) -> str:
@@ -141,25 +141,35 @@ def build(eps: np.ndarray) -> plt.Figure:
     ax_a.bar(centers[tail], counts[tail], width=width, color=S.C_EMERGENCY,
              alpha=0.62, lw=0, zorder=3)
 
-    ax_a.axvline(0, color=S.C_ACTUAL, ls="-.", lw=1.0, zorder=4)
-    ax_a.axvline(q80, color=S.C_EMERGENCY, lw=1.6, zorder=5)
+    # 两条参考线只画到图例下方：贯穿整幅 panel 的竖线会穿过右上角图例的文字，
+    # 碰撞审计判 text-stroke。用 blended transform 混用"数据 x + 轴分数 y"。
+    from matplotlib.transforms import blended_transform_factory
+    _tr = blended_transform_factory(ax_a.transData, ax_a.transAxes)
+    ax_a.plot([0, 0], [0, 0.72], transform=_tr, color=S.C_ACTUAL, ls="-.",
+              lw=1.0, zorder=4)
+    ax_a.plot([q80, q80], [0, 0.72], transform=_tr, color=S.C_EMERGENCY,
+              lw=1.6, zorder=5)
     ax_a.set_xlim(x_lo, x_hi)
     ax_a.set_ylim(0, ymax * 1.34)
     ax_a.set_xlabel("净负荷预测误差 ε (kWh / 10min)")
     ax_a.set_ylabel("概率密度")
     S.add_panel_label(ax_a, "a", x=XY_LABEL[0], y=XY_LABEL[1],
                       dx_pt=0, dy_pt=0, va="top")
-    _claim(ax_a, "右侧 20% 即尾部风险", S.C_EMERGENCY)
 
-    # 两条参考线的标注分列线的左右、同一高度：q80(0.55) 与 0(0.49) 在轴上很近，
-    # 若都靠右会直接叠字，故一个右对齐留在 0 左侧、一个左对齐放在 q80 右侧。
-    ax_a.text(-6.0, ymax * 1.12, "预测值 0", fontsize=6.8, color=S.C_ACTUAL,
-              ha="right", va="bottom")
-    ax_a.text(q80 + 6.0, ymax * 1.12, f"Q0.8 = {q80:.1f} kWh", fontsize=6.8,
-              color=S.C_EMERGENCY, ha="left", va="bottom", fontweight="bold")
-    # 尾部区域内的说明：放在色块下半部的空白处
-    ax_a.text(0.5 * (q80 + x_hi), ymax * 0.34, "紧急购电区", fontsize=6.8,
-              color="#8C2028", ha="center", va="center", fontweight="bold")
+    # 说明一律走图例，不在轴内写结论句（全篇插图规范）。
+    # Q0.8 的具体数值属于"数字"，按规范保留在图中，作为图例条目的后缀。
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    ax_a.legend(
+        handles=[
+            Patch(facecolor=S.C_FORECAST, alpha=0.36, label="经验分布"),
+            Patch(facecolor=S.C_EMERGENCY, alpha=0.62, label="尾部 20%（紧急购电区）"),
+            Line2D([], [], color=S.C_ACTUAL, ls="-.", lw=1.0, label="预测值 0"),
+            Line2D([], [], color=S.C_EMERGENCY, lw=1.6,
+                   label=f"Q0.8 = {q80:.1f} kWh"),
+        ],
+        loc="upper right", fontsize=6.4, frameon=False, borderaxespad=0.5,
+        labelspacing=0.35, handlelength=1.5, handletextpad=0.6)
 
     # ================================================== (b) 边际成本平衡
     grid = np.linspace(x_lo, x_hi, 800)
@@ -181,25 +191,22 @@ def build(eps: np.ndarray) -> plt.Figure:
     ax_b.set_ylabel("边际成本（正常电价 p 的倍数）")
     S.add_panel_label(ax_b, "b", x=XY_LABEL[0], y=XY_LABEL[1],
                       dx_pt=0, dy_pt=0, va="top")
-    _claim(ax_b, "两线相交于 F(g) = 0.8", S.C_GRID)
 
     # 两条曲线的直接标注。降曲线标注放在曲线值域(0→5)之上的空白带；
     # 水平线标注贴在线右端上方——降曲线在该处已跌破 1，不会与文字相交。
-    ax_b.text(x_lo + 0.03 * span, PRICE_RATIO * 1.38,
-              "少买 1 kWh 的期望成本 = 5p · P(N > g)", fontsize=6.9,
-              color=S.C_EMERGENCY, ha="left", va="center", fontweight="bold")
-    ax_b.text(x_hi - 0.01 * span, 1.25,
-              "多买 1 kWh 的成本 = p", fontsize=6.9,
-              color=S.C_GRID, ha="right", va="bottom", fontweight="bold")
+    ax_b.legend(
+        handles=[
+            Line2D([], [], color=S.C_EMERGENCY, lw=1.8,
+                   label="少买 1 kWh 的期望成本 = 5p · P(N > g)"),
+            Line2D([], [], color=S.C_GRID, lw=1.8,
+                   label="多买 1 kWh 的确定成本 = p"),
+        ],
+        loc="upper right", fontsize=6.4, frameon=False, borderaxespad=0.5,
+        labelspacing=0.35, handlelength=1.5, handletextpad=0.6)
 
     # ================================================== 脚注（数学限定）
-    note = ("注：F(g) = (5−1)/5 = 0.8 不依赖任何分布假设，(a) 的经验分布仅示范形状；该结论只在忽略储能与跨时段耦合时严格成立，"
-            "故本文把 α 作为参数搜索起点（8 轮标定落在 α ∈ [0.70, 0.90]，0.75 最多），最终由连续运行总费用标定；"
-            "经验分布由 334 天 × 144 时段汇总，模型内部为逐时段 28 天窗口分位数。")
-    fig.text(0.006, 0.012, S.wrap_cjk(note, fontsize=6.2), fontsize=6.2, color="#7A7A7A",
-             ha="left", va="bottom", linespacing=1.5)
-
-    fig.subplots_adjust(top=0.93, bottom=0.24)
+    # 脚注移出图片：数学限定与数据口径写在正文的「注」里。
+    fig.subplots_adjust(top=0.955, bottom=0.155)
     return fig
 
 

@@ -47,15 +47,29 @@ C_SAVE          节约        #2F7A3E     仅用于"费用下降"方向性提示
 
 字体与可编辑文本
 ----------------
-**中文回退必须写成 `font.family` 的列表，不能写 `font.sans-serif` 列表。**
+**衬线体方案（2026-09-13 定稿）**：拉丁与数字走 Times New Roman，中文走宋体
+（SimSun），与中文论文正文的排版惯例一致。字体真源是本模块的 `FONT_CHAIN`：
 
-    font.family = ['Arial', 'Microsoft YaHei', 'DejaVu Sans']   # ✓ 正确
-    font.sans-serif = ['Arial', 'Microsoft YaHei']              # ✗ 无效，中文变豆腐块
+    FONT_CHAIN = ('Times New Roman', 'SimSun', 'SimHei', 'DejaVu Serif')
+
+**回退链必须写成 `font.family` 的列表，不能写 `font.sans-serif` 列表。**
+
+    font.family = ['Times New Roman', 'SimSun', 'SimHei', 'DejaVu Serif']   # ✓
+    font.sans-serif = ['Times New Roman', 'SimSun']                         # ✗ 中文豆腐块
 
 matplotlib 的逐字形回退只认 `font.family` 列表；把候选字体放在 `font.sans-serif`
-里时它只取第一个能解析的字体（Arial），缺字直接画成空白/豆腐块且**不报错**
-（只在 savefig 时给 UserWarning）。本仓库已实测：拉丁字形走 Arial、中文回退到
-微软雅黑，两者共用一条 `font.family` 列表；该行为由 `_font_probe.py` 像素级校验。
+里时它只取第一个能解析的字体（Times New Roman），缺字直接画成空白/豆腐块且
+**不报错**（只在 savefig 时给 UserWarning）。拉丁走 Times、中文走宋体这条分工由
+`_font_probe.py`（像素墨量）与 `_font_coverage.py`（逐字形 cmap 覆盖）双重校验。
+
+⚠️ **宋体没有粗体字形。** 实测 `findfont(SimSun, weight=700)` 返回的仍是
+`simsun.ttc` 常规体——matplotlib 既不报错、也不回退，粗体中文会**静默**退化成
+常规体。本模块用 `_register_cjk_bold_face()` 解决：把黑体（SimHei）的字体面以
+`SimSun + weight=700` 的名义补进 matplotlib 的字体表，于是 `fontweight="bold"`
+的中文自动落到黑体上，**调用方无需任何额外 API**。这既是中文排版「宋体没有粗体
+时用黑体代替」的惯例，也与论文正文自身的 FandolSong + FandolHei 配对一致。
+拉丁与数字不受影响：粗体拉丁仍由 Times New Roman Bold 承接。
+该注册是否真的生效，由 `_font_coverage.py` 打印**实际承接字体文件**来核验。
 
 `pdf.fonttype = 42` / `svg.fonttype = 'none'` 保证导出后文字仍可编辑、可检索。
 
@@ -93,6 +107,30 @@ SUP_DIR = ROOT / "06_支撑材料"     # 模型真实输出（只读）
 for _d in (FIG_DIR, FIG_PDF, FIG_QA):
     _d.mkdir(parents=True, exist_ok=True)
 del _d
+
+# ================================================================ 字体
+
+#: 拉丁与数字：Times New Roman（与中文论文正文的衬线体一致）
+FONT_LATIN = "Times New Roman"
+#: 中文：宋体
+FONT_CJK = "SimSun"
+#: 宋体缺字时的兜底中文字体（黑体），避免落到无中日韩字形的拉丁字体上
+FONT_CJK_FALLBACK = "SimHei"
+#: 最终兜底：matplotlib 自带，任何机器上都在
+FONT_FALLBACK = "DejaVu Serif"
+
+#: 逐字形回退链。**顺序即优先级**，且必须整体交给 `font.family`（见模块 docstring）。
+FONT_CHAIN: tuple[str, ...] = (
+    FONT_LATIN, FONT_CJK, FONT_CJK_FALLBACK, FONT_FALLBACK,
+)
+
+#: 数学字体集。mathtext **不走** font.family 回退链，故必须单独指定。
+#: 取 `cm`（Computer Modern）——**与论文正文公式的字体一致**：实测论文成品
+#: `05_论文/final_new/main.pdf` 嵌入的数学字体是 CMR / CMMI / CMSY 系列，
+#: 即 LaTeX 默认的 Computer Modern。图内的目标函数式必须与之同源，
+#: 否则读起来像是从别处贴进来的。（曾用过 dejavusans / stix，均与正文不符。）
+#: 含 `$...$` 的字符串不得混写中文——mathtext 不走 font.family 回退链。
+MATHTEXT_FONTSET = "cm"
 
 # ================================================================ 颜色
 
@@ -171,13 +209,65 @@ MS_MARKER = 3.2    # marker 尺寸
 
 # ================================================================ rcParams
 
+def _register_cjk_bold_face() -> bool:
+    """把黑体（SimHei）注册为宋体（SimSun）的**粗体面**。
+
+    为什么必须这么做：宋体只有 weight=400 一个字重。请求 `weight=700` 时
+    matplotlib 既**不报错、也不回退**，而是照常返回 simsun.ttc 常规体——
+    于是所有粗体中文静默退化为常规体，字重层级消失，且没有任何日志提示。
+    （实测见模块 docstring。）
+
+    做法：复制宋体的 FontEntry，把字体文件换成黑体、字重标为 700，追加进
+    `fontManager.ttflist`。此后 `FontProperties(family='SimSun', weight=700)`
+    解析到黑体，而 `weight=400` 仍解析到宋体。拉丁不受影响——回退链里
+    Times New Roman 排在前面，粗体拉丁由 timesbd.ttf 承接。
+
+    用黑体替代粗体是中文排版惯例，也与论文正文的 FandolSong + FandolHei
+    配对一致，因此图与正文的强调方式统一。
+
+    返回是否注册成功。字体缺失（如换到无中文字体的机器）时返回 False 而不抛
+    异常，保证出图流程不中断。
+    """
+    from matplotlib import font_manager as fm
+
+    def _weight_of(entry) -> int:
+        try:
+            return int(entry.weight)
+        except (TypeError, ValueError):
+            return 400
+
+    ttflist = fm.fontManager.ttflist
+    # 幂等：apply_style 每个脚本都会调一次，重复追加会让字体表无谓膨胀。
+    if any(e.name == FONT_CJK and _weight_of(e) >= 700 for e in ttflist):
+        return True
+
+    sun = next((e for e in ttflist if e.name == FONT_CJK), None)
+    hei = next((e for e in ttflist if e.name == FONT_CJK_FALLBACK), None)
+    if sun is None or hei is None:
+        return False
+
+    import dataclasses
+    ttflist.append(dataclasses.replace(sun, fname=hei.fname, weight=700))
+
+    # 字体表变了，必须清掉 findfont 的缓存，否则仍会命中旧的解析结果。
+    # 这两个缓存是 matplotlib 内部实现，故一律 hasattr 兜底。
+    for clear in (getattr(fm.fontManager, "_findfont_cached", None),
+                  getattr(fm, "_get_font", None)):
+        if clear is not None and hasattr(clear, "cache_clear"):
+            clear.cache_clear()
+    return True
+
+
 def apply_style() -> None:
     """应用全篇统一 rcParams。每个绘图脚本在建立 figure 之前调用一次。"""
+    _register_cjk_bold_face()
     mpl.rcParams.update({
-        # —— 字体：拉丁走 Arial，中文逐字形回退到微软雅黑 ——
+        # —— 字体：拉丁与数字走 Times New Roman，中文逐字形回退到宋体 ——
         # 必须用 font.family 列表；放进 font.sans-serif 不会触发回退（见模块 docstring）。
-        "font.family": ["Arial", "Microsoft YaHei", "DejaVu Sans"],
-        "axes.unicode_minus": False,   # 中文字体下负号正常显示
+        "font.family": list(FONT_CHAIN),
+        # Times New Roman 含 U+2212 真减号，比 ASCII 连字符更配衬线数字。
+        # 该字符是否真的存在由 `_font_coverage.py` 逐字形校验，缺字会 FAIL。
+        "axes.unicode_minus": True,
 
         # —— 可编辑文本：PDF 嵌入 TrueType，SVG 保留 <text> 节点 ——
         "pdf.fonttype": 42,
@@ -231,7 +321,8 @@ def apply_style() -> None:
         "axes.facecolor": "white",
 
         # —— 数学文本：不调用外部 LaTeX（环境无保证），用 mathtext ——
-        "mathtext.fontset": "dejavusans",
+        # fontset 与正文衬线体配对，见 MATHTEXT_FONTSET 说明。
+        "mathtext.fontset": MATHTEXT_FONTSET,
         "mathtext.default": "regular",
     })
 
@@ -386,6 +477,8 @@ def wrap_cjk(text: str, *, fontsize: float, fig_width_mm: float = FIG_W_FULL,
 
 __all__ = [
     "ROOT", "FIG_DIR", "FIG_PDF", "FIG_QA", "SUP_DIR",
+    "FONT_LATIN", "FONT_CJK", "FONT_CJK_FALLBACK", "FONT_FALLBACK",
+    "FONT_CHAIN", "MATHTEXT_FONTSET",
     "PALETTE", "TERMS",
     "FIG_W_FULL", "FIG_W_HALF", "mm2in",
     "FS_TICK", "FS_LABEL", "FS_ANNOT", "FS_PANEL", "FS_TITLE",

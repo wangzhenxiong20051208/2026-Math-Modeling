@@ -1,17 +1,17 @@
 {
   "pdf": "C:\\Users\\lenovo\\Desktop\\新建文件夹\\2026-Math-Modeling\\04_图\\pdf\\fig04_risk_execution.pdf",
   "auditable": true,
-  "verdict": "REVIEW REQUIRED",
+  "verdict": "PASS",
   "page_count": 1,
-  "visible_text_box_count": 58,
-  "text_trace_count": 89,
-  "stroke_path_count": 79,
-  "filled_region_count": 122,
+  "visible_text_box_count": 57,
+  "text_trace_count": 65,
+  "stroke_path_count": 83,
+  "filled_region_count": 124,
   "image_region_count": 0,
   "summary": {
     "fail": 0,
-    "warn": 4,
-    "contained_fill_overlays": 10,
+    "warn": 0,
+    "contained_fill_overlays": 6,
     "contained_image_overlays": 0
   },
   "thresholds": {
@@ -19,112 +19,5 @@
     "min_overlap_ratio": 0.05,
     "clipping_tolerance_pt": 0.5
   },
-  "findings": [
-    {
-      "severity": "WARN",
-      "kind": "text-fill-edge",
-      "page": 1,
-      "message": "Text partially overlaps the edge of 1 filled region(s)",
-      "text": "a",
-      "text_bbox": [
-        43.69179153442383,
-        7.137160778045654,
-        48.69716262817383,
-        16.137161254882812
-      ],
-      "other_text": null,
-      "other_bbox": [
-        48.38682556152344,
-        3.681243896484375,
-        49.52639389038086,
-        138.42459106445312
-      ],
-      "object_count": 1,
-      "object_indexes": [
-        2000
-      ]
-    },
-    {
-      "severity": "WARN",
-      "kind": "text-fill-edge",
-      "page": 1,
-      "message": "Text partially overlaps the edge of 5 filled region(s)",
-      "text": "秋分 09-23：71 个时段超出",
-      "text_bbox": [
-        121.03095245361328,
-        166.24720764160156,
-        201.90045166015625,
-        172.90469360351562
-      ],
-      "other_text": null,
-      "other_bbox": [
-        136.1337890625,
-        161.87765502929688,
-        190.83319091796875,
-        296.6209716796875
-      ],
-      "object_count": 5,
-      "object_indexes": [
-        69000,
-        70000,
-        73000,
-        75000,
-        76000
-      ]
-    },
-    {
-      "severity": "WARN",
-      "kind": "text-fill-edge",
-      "page": 1,
-      "message": "Text partially overlaps the edge of 1 filled region(s)",
-      "text": "b",
-      "text_bbox": [
-        280.64532470703125,
-        7.137160778045654,
-        286.14288330078125,
-        16.137161254882812
-      ],
-      "other_text": null,
-      "other_bbox": [
-        285.3403625488281,
-        3.681243896484375,
-        286.47991943359375,
-        138.42459106445312
-      ],
-      "object_count": 1,
-      "object_indexes": [
-        30000
-      ]
-    },
-    {
-      "severity": "WARN",
-      "kind": "text-fill-edge",
-      "page": 1,
-      "message": "Text partially overlaps the edge of 7 filled region(s)",
-      "text": "储能触底 → 19 个时段紧急购电",
-      "text_bbox": [
-        346.5938720703125,
-        166.32533264160156,
-        438.8097839355469,
-        172.98281860351562
-      ],
-      "other_text": null,
-      "other_bbox": [
-        341.1793518066406,
-        161.87765502929688,
-        427.7867431640625,
-        296.6209716796875
-      ],
-      "object_count": 7,
-      "object_indexes": [
-        110000,
-        112000,
-        113000,
-        116000,
-        119000,
-        136000,
-        137000
-      ]
-    }
-  ]
+  "findings": []
 }

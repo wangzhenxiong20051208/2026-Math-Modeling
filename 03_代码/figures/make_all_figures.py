@@ -48,7 +48,8 @@ ROOT = S.ROOT
 #: 尺寸上限用于兜住"某行文字超宽把整页撑开"这类静默事故——它不会报错，
 #: 只会让版心推算失效、并让碰撞审计产生成串假重叠。
 FIGURES: list[tuple[str, str, float, float]] = [
-    ("fig01_framework", "fig01_framework.py", 175.0, 190.0),
+    # fig01 收紧版面后高约 143 mm，上限给到 160 以便及早发现"又被撑开"。
+    ("fig01_framework", "fig01_framework.py", 175.0, 160.0),
     ("fig02_p1_dispatch", "fig02_p1_dispatch.py", 175.0, 145.0),
     ("fig03_q80_mechanism", "fig03_q80_mechanism.py", 175.0, 110.0),
     ("fig04_risk_execution", "fig04_risk_execution.py", 175.0, 150.0),
