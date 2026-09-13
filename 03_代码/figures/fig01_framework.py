@@ -167,7 +167,7 @@ def build() -> plt.Figure:
         introduced = bool(mask[0])
 
         _rounded(ax, X_STAGE_L, yc - BOX_HH, X_STAGE_R, yc + BOX_HH,
-                 edgecolor=color if introduced else "#A8B2BE",
+                 edgecolor=color if introduced else "#B3AAA0",
                  linewidth=1.0 if introduced else 0.65)
 
         ax.text(X_STAGE_L + BOX_PAD_X, yc, name, fontsize=7.2,

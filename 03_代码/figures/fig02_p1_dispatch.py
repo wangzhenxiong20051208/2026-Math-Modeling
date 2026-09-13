@@ -57,8 +57,8 @@ E_MIN, E_MAX, E_INIT = 1200.0, 10800.0, 6000.0
 P_LOW, P_HIGH = 25, 75
 
 #: 窗口底纹分别呼应"充电(绿)"与"放电(紫)"，颜色本身即语义
-BAND_LOW = "#EAF4EA"
-BAND_HIGH = "#F1EEF9"
+BAND_LOW = "#ECF3E3"
+BAND_HIGH = "#F5E7E0"
 
 #: 轴内文本位置（axes fraction）
 XY_LABEL = (0.012, 0.985)     # panel 字母（轴内左上）

@@ -59,7 +59,7 @@ E_MIN, E_MAX = 1200.0, 10800.0
 DAY_ABSORB = "2025-12-21"     # 冬至
 DAY_EMERG = "2025-09-23"      # 秋分
 
-BAND_EXCEED = "#F6DCDE"       # 超出风险净负荷的时段底纹
+BAND_EXCEED = "#F7E3E1"       # 超出风险净负荷的时段底纹
 XY_LABEL = (0.020, 0.968)
 XY_CLAIM = (0.985, 0.968)
 

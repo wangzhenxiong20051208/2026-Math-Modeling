@@ -159,7 +159,7 @@ def build(eps: np.ndarray) -> plt.Figure:
               color=S.C_EMERGENCY, ha="left", va="bottom", fontweight="bold")
     # 尾部区域内的说明：放在色块下半部的空白处
     ax_a.text(0.5 * (q80 + x_hi), ymax * 0.34, "紧急购电区", fontsize=6.8,
-              color="#8C2F3C", ha="center", va="center", fontweight="bold")
+              color="#8C2028", ha="center", va="center", fontweight="bold")
 
     # ================================================== (b) 边际成本平衡
     grid = np.linspace(x_lo, x_hi, 800)
