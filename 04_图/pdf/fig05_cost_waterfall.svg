@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="446.898898pt" height="257.153528pt" viewBox="0 0 446.898898 257.153528" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-09-13T13:33:06.461233</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.9, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 257.153528 
+L 446.898898 257.153528 
+L 446.898898 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 37.269921 211.629118 
+L 445.458898 211.629118 
+L 445.458898 21.140929 
+L 37.269921 21.140929 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1"/>
+     <g id="text_1">
+      <text style="font-size: 7px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(64.292154 220.567243)">预测均值策略</text>
+      <text style="font-size: 7px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(57.292154 228.685056)">（不加风险余量）</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2"/>
+     <g id="text_2">
+      <text style="font-size: 7px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(144.812645 220.512556)">+ 计划购电费</text>
+      <text style="font-size: 7px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(144.329208 228.711743)">（提前多买）</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3"/>
+     <g id="text_3">
+      <text style="font-size: 7px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(224.8497 220.594587)">− 紧急购电费</text>
+      <text style="font-size: 7px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(213.866262 228.793774)">（尾部缺口被堵住）</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4"/>
+     <g id="text_4">
+      <text style="font-size: 7px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(297.403316 220.553024)">本文风险修正策略</text>
+      <text style="font-size: 7px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #4d4d4d" transform="translate(307.903316 228.736462)">（主模型）</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_5">
+      <defs>
+       <path id="me96a92363e" d="M 0 0 
+L -2.5 0 
+" style="stroke: #4d4d4d; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#me96a92363e" x="37.269921" y="211.629118" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 7.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="31.269921" y="214.313298" transform="rotate(-0 31.269921 214.313298)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#me96a92363e" x="37.269921" y="185.860396" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 7.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="31.269921" y="188.544576" transform="rotate(-0 31.269921 188.544576)">250</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#me96a92363e" x="37.269921" y="160.091674" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 7.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="31.269921" y="162.775854" transform="rotate(-0 31.269921 162.775854)">500</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#me96a92363e" x="37.269921" y="134.322952" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 7.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="31.269921" y="137.007131" transform="rotate(-0 31.269921 137.007131)">750</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#me96a92363e" x="37.269921" y="108.55423" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 7.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="31.269921" y="111.238409" transform="rotate(-0 31.269921 111.238409)">1000</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#me96a92363e" x="37.269921" y="82.785508" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 7.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="31.269921" y="85.469687" transform="rotate(-0 31.269921 85.469687)">1250</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#me96a92363e" x="37.269921" y="57.016785" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 7.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="31.269921" y="59.700965" transform="rotate(-0 31.269921 59.700965)">1500</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#me96a92363e" x="37.269921" y="31.248063" style="fill: #4d4d4d; stroke: #4d4d4d; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 7.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: end; fill: #4d4d4d" x="31.269921" y="33.932243" transform="rotate(-0 31.269921 33.932243)">1750</text>
+     </g>
+    </g>
+    <g id="text_13">
+     <text style="font-size: 8px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #272727" x="8.997109" y="116.385024" transform="rotate(-90 8.997109 116.385024)">全年购电费（万元）</text>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 62.881779 211.629118 
+L 107.702529 211.629118 
+L 107.702529 58.009611 
+L 62.881779 58.009611 
+z
+" clip-path="url(#p0a7b04795d)" style="fill: #767676; opacity: 0.85"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 142.918833 58.009611 
+L 187.739583 58.009611 
+L 187.739583 47.811283 
+L 142.918833 47.811283 
+z
+" clip-path="url(#p0a7b04795d)" style="fill: #0f4d92; opacity: 0.92"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 222.955887 67.945605 
+L 267.776637 67.945605 
+L 267.776637 47.811283 
+L 222.955887 47.811283 
+z
+" clip-path="url(#p0a7b04795d)" style="fill: #d1495b; opacity: 0.92"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 302.992941 211.629118 
+L 347.813692 211.629118 
+L 347.813692 67.945605 
+L 302.992941 67.945605 
+z
+" clip-path="url(#p0a7b04795d)" style="fill: #767676; opacity: 0.85"/>
+   </g>
+   <g id="line2d_13">
+    <path d="M 107.702529 58.009611 
+L 142.918833 58.009611 
+" clip-path="url(#p0a7b04795d)" style="fill: none; stroke-dasharray: 0.9,1.485; stroke-dashoffset: 0; stroke: #9a9a9a; stroke-width: 0.9; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_14">
+    <path d="M 187.739583 47.811283 
+L 222.955887 47.811283 
+" clip-path="url(#p0a7b04795d)" style="fill: none; stroke-dasharray: 0.9,1.485; stroke-dashoffset: 0; stroke: #9a9a9a; stroke-width: 0.9; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_15">
+    <path d="M 267.776637 67.945605 
+L 302.992941 67.945605 
+" clip-path="url(#p0a7b04795d)" style="fill: none; stroke-dasharray: 0.9,1.485; stroke-dashoffset: 0; stroke: #9a9a9a; stroke-width: 0.9; stroke-linecap: round"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 37.269921 211.629118 
+L 37.269921 21.140929 
+" style="fill: none; stroke: #4d4d4d; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_14">
+    <text style="font-weight: 700; font-size: 7.6px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #1f1f1f" x="85.292154" y="54.242151" transform="rotate(-0 85.292154 54.242151)">1,490</text>
+   </g>
+   <g id="text_15">
+    <text style="font-weight: 700; font-size: 7.6px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #1f1f1f" x="325.403316" y="64.178145" transform="rotate(-0 325.403316 64.178145)">1,394</text>
+   </g>
+   <g id="text_16">
+    <text style="font-weight: 700; font-size: 7.6px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #0f4d92" x="165.329208" y="44.043823" transform="rotate(-0 165.329208 44.043823)">+99</text>
+   </g>
+   <g id="text_17">
+    <text style="font-weight: 700; font-size: 7.6px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #d1495b" x="245.366262" y="75.85934" transform="rotate(-0 245.366262 75.85934)">-195</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 6.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #0f4d92" x="165.329208" y="67.106122" transform="rotate(-0 165.329208 67.106122)">计划购电量 +6.7%</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 6.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #d1495b" x="245.366262" y="43.014862" transform="rotate(-0 245.366262 43.014862)">紧急购电量 -74.3%</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 6.5px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #d1495b" x="245.366262" y="82.509667" transform="rotate(-0 245.366262 82.509667)">5 倍电价</text>
+   </g>
+   <g id="patch_8">
+    <path d="M 359.018879 59.351252 
+Q 359.018879 62.977608 359.018879 66.603964 
+" style="fill: none; stroke: #2e9e44; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 357.418879 62.551252 
+L 359.018879 59.351252 
+L 360.618879 62.551252 
+" style="fill: none; stroke: #2e9e44; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 360.618879 63.403964 
+L 359.018879 66.603964 
+L 357.418879 63.403964 
+" style="fill: none; stroke: #2e9e44; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="text_21">
+    <text style="font-weight: 700; font-size: 7.4px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #2e9e44" transform="translate(370.224067 61.207852)">净节约</text>
+    <text style="font-weight: 700; font-size: 7.4px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #2e9e44" transform="translate(370.224067 69.024333)">96 万元</text>
+   </g>
+   <g id="text_22">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #272727" x="43.392756" y="32.345165" transform="rotate(-0 43.392756 32.345165)">a</text>
+   </g>
+  </g>
+  <g id="text_23">
+   <text style="font-weight: 700; font-size: 9.6px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #1a1a1a" x="1.44" y="9.0135" transform="rotate(-0 1.44 9.0135)">低价确定性支出替代高价尾部风险支出</text>
+  </g>
+  <g id="text_24">
+   <text style="font-size: 6.2px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #7a7a7a" transform="translate(1.44 245.325137)">注：两策略使用同一预测器、同一实时执行规则，各自单独标定；区间为 2025-02-01 至 2025-12-31（334 天）</text>
+   <text style="font-size: 6.2px; font-family: 'Arial', 'Microsoft YaHei', 'DejaVu Sans'; fill: #7a7a7a" transform="translate(1.44 254.408621)">。起点柱与终点柱为各自全年合计费用，中间两根为两者之差。数据：06_支撑材料/p2_results.json。</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p0a7b04795d">
+   <rect x="37.269921" y="21.140929" width="408.188976" height="190.488189"/>
+  </clipPath>
+ </defs>
+</svg>

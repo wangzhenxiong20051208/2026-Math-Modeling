@@ -1,0 +1,133 @@
+{
+  "pdf": "C:\\Users\\lenovo\\Desktop\\新建文件夹\\2026-Math-Modeling\\04_图\\pdf\\fig02_p1_dispatch.pdf",
+  "auditable": true,
+  "verdict": "REVIEW REQUIRED",
+  "page_count": 1,
+  "visible_text_box_count": 46,
+  "text_trace_count": 71,
+  "stroke_path_count": 79,
+  "filled_region_count": 561,
+  "image_region_count": 0,
+  "summary": {
+    "fail": 0,
+    "warn": 4,
+    "contained_fill_overlays": 12,
+    "contained_image_overlays": 0
+  },
+  "thresholds": {
+    "text_inset_pt": 0.6,
+    "min_overlap_ratio": 0.05,
+    "clipping_tolerance_pt": 0.5
+  },
+  "findings": [
+    {
+      "severity": "WARN",
+      "kind": "text-fill-edge",
+      "page": 1,
+      "message": "Text partially overlaps the edge of 5 filled region(s)",
+      "text": "低谷时段占 25%，却承担 53% 购电量",
+      "text_bbox": [
+        289.06475830078125,
+        119.71154022216797,
+        402.8606262207031,
+        126.57077026367188
+      ],
+      "other_text": null,
+      "other_bbox": [
+        309.2699279785156,
+        118.856689453125,
+        406.90771484375,
+        180.71678161621094
+      ],
+      "object_count": 5,
+      "object_indexes": [
+        42000,
+        43000,
+        47000,
+        48000,
+        49000
+      ]
+    },
+    {
+      "severity": "WARN",
+      "kind": "text-fill-edge",
+      "page": 1,
+      "message": "Text partially overlaps the edge of 4 filled region(s)",
+      "text": "低谷充电、高峰放电",
+      "text_bbox": [
+        341.93975830078125,
+        194.17315673828125,
+        403.1397399902344,
+        200.97315979003906
+      ],
+      "other_text": null,
+      "other_bbox": [
+        314.1518249511719,
+        193.2434539794922,
+        406.90771484375,
+        255.10354614257812
+      ],
+      "object_count": 4,
+      "object_indexes": [
+        220000,
+        221000,
+        226000,
+        227000
+      ]
+    },
+    {
+      "severity": "WARN",
+      "kind": "text-fill-edge",
+      "page": 1,
+      "message": "Text partially overlaps the edge of 4 filled region(s)",
+      "text": "两端触及运行边界",
+      "text_bbox": [
+        348.68975830078125,
+        268.6531982421875,
+        403.0897521972656,
+        275.45318603515625
+      ],
+      "other_text": null,
+      "other_bbox": [
+        314.1518249511719,
+        267.6302185058594,
+        406.90771484375,
+        332.58331298828125
+      ],
+      "object_count": 4,
+      "object_indexes": [
+        542000,
+        543000,
+        548000,
+        549000
+      ]
+    },
+    {
+      "severity": "WARN",
+      "kind": "text-fill-edge",
+      "page": 1,
+      "message": "Text partially overlaps the edge of 4 filled region(s)",
+      "text": "峰谷价差 3.8 倍",
+      "text_bbox": [
+        355.81475830078125,
+        45.324771881103516,
+        402.7489013671875,
+        52.18400192260742
+      ],
+      "other_text": null,
+      "other_bbox": [
+        314.1518249511719,
+        44.469940185546875,
+        406.90771484375,
+        106.33001708984375
+      ],
+      "object_count": 4,
+      "object_indexes": [
+        8000,
+        9000,
+        14000,
+        15000
+      ]
+    }
+  ]
+}
