@@ -1,0 +1,161 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{cumcm2026}[2026/08/23 v1.0 CUMCM 2026 paper style]
+
+\RequirePackage{geometry}
+% 2026 年竞赛格式规定（format2026.doc 第一条）：上下左右各留出至少 2.5 厘米的
+% 页边距。此处取正好 2.5cm，不得再缩小。
+\geometry{a4paper,left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm,headheight=15pt}
+
+\RequirePackage{amsmath,amssymb,mathtools}
+\RequirePackage{booktabs,array,tabularx,longtable,multirow}
+\RequirePackage{graphicx,float,caption,subcaption}
+\RequirePackage{etoolbox}
+\RequirePackage{enumitem}
+\RequirePackage{xcolor}
+\RequirePackage{listings}
+\RequirePackage{siunitx}
+\RequirePackage{microtype}
+\RequirePackage{titlesec}
+\RequirePackage{fancyhdr}
+
+% tabularx: X-derived wrapping columns.
+\newcolumntype{Y}{>{\centering\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+% ---------------------------------------------------------------------------
+% 表格行距与列间距
+% cumcmthesis.cls 在每个 tabular 内部强制 \arraystretch=1.38，是为了配合它自己
+% 的 \baselinestretch=1.38。本文正文行距取 1.00（见下），若表格仍按 1.38 排版，
+% 表内行距反而比正文更松，既难看又浪费页数。此处复用 cls 已经保存的原始
+% \tabular，把表内行距收到与正文相称的 1.02，并把列间距从默认值收到 2.5pt。
+% 这两项只改版式，不改任何数字。
+% 注意：本文件后面的 \mcm@... 名称都依赖 @ 为字母，所以这里用 \makeatletter
+% 收尾而不是 \makeatother（\makeatother 会把 @ 变成 catcode 12 并一直延续到
+% 文件结尾，导致后面 \mcm@tokens@keywords 等名称被拆开而报未定义）。
+\makeatletter
+\renewenvironment{tabular}%
+  {\bgroup\renewcommand{\arraystretch}{1.02}\mcm@oldtabular}%
+  {\mcm@endoldtabular\egroup}
+\makeatletter
+\setlength{\tabcolsep}{2.5pt}
+
+\definecolor{cumcmblue}{HTML}{1F4E79}
+\definecolor{cumcmgray}{HTML}{F2F4F7}
+\definecolor{codegreen}{HTML}{2E6B4E}
+
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0pt}
+\linespread{1.00}
+% 中文段落几乎没有可断行的位置，长数字串与 \texttt 更容易溢出。
+% emergencystretch 允许 TeX 在必要时多拉伸词间距，从而消掉绝大多数
+% Overfull \hbox，而不需要删改任何正文。
+\setlength{\emergencystretch}{2.5em}
+\setlength{\abovedisplayskip}{6pt plus 2pt minus 2pt}
+\setlength{\belowdisplayskip}{6pt plus 2pt minus 2pt}
+\setlist{leftmargin=2em,labelsep=0.6em,itemsep=0.25em,topsep=0.4em,parsep=0pt}
+
+% 浮动体与正文、图表之间的留白（规范要求正文不超过 30 页，此处为无损压缩）
+\setcounter{topnumber}{4}
+\setcounter{bottomnumber}{3}
+\setcounter{totalnumber}{5}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.5}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.72}
+\setlength{\abovedisplayskip}{4pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{4pt plus 1pt minus 1pt}
+\setlength{\floatsep}{4pt plus 1pt minus 1pt}
+\setlength{\textfloatsep}{5pt plus 1pt minus 1pt}
+\setlength{\intextsep}{4pt plus 1pt minus 1pt}
+\setlength{\abovecaptionskip}{3pt}
+\setlength{\belowcaptionskip}{0pt}
+\setlength{\dblfloatsep}{4pt}
+\setlength{\dbltextfloatsep}{5pt}
+
+\titleformat{\section}{\centering\heiti\zihao{3}\bfseries}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\heiti\zihao{4}\bfseries}{\thesubsection}{0.8em}{}
+\titleformat{\subsubsection}{\heiti\zihao{-4}\bfseries}{\thesubsubsection}{0.8em}{}
+\titlespacing{\section}{0pt}{0.9em}{0.6em}
+\titlespacing{\subsection}{0pt}{0.8em}{0.4em}
+\titlespacing{\subsubsection}{0pt}{0.6em}{0.3em}
+
+\captionsetup{font=small,labelsep=quad,skip=3pt}
+
+% ---------------------------------------------------------------------------
+% 摘要专用页（format2026.doc 第三条：摘要含标题与关键词原则上不超过一页）
+% 摘要正文取五号、单倍行距；"摘 要"二字仍为三号，与论文封面体例一致。
+% 这样处理纯粹是版式压缩，不删减任何结果与数字。
+\AtBeginEnvironment{abstract}{\zihao{5}\linespread{1.0}\selectfont
+  \setlength{\topsep}{0pt}\setlength{\parsep}{0pt}}
+\renewcommand{\keywords}[1]{%
+  \renewcommand{\mcm@tokens@keywords}{#1}%
+  \par\vskip0.6ex
+  {\noindent\zihao{5}\heiti\mcm@cap@keywordsname：}~{\zihao{5}#1}%
+}
+\captionsetup[table]{position=top}
+\renewcommand{\figurename}{图}
+\renewcommand{\tablename}{表}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\thepage}\renewcommand{\headrulewidth}{0pt}}
+
+\makeatletter
+\AtBeginDocument{\hypersetup{pdftitle={\@title},pdfauthor={},pdfsubject={2026 CUMCM参赛论文}}}
+\makeatother
+
+\newenvironment{cumcmabstract}
+  {\begingroup\zihao{-4}\setlength{\parindent}{2em}}
+  {\par\endgroup\clearpage}
+
+\newcommand{\cumcmkeywords}[1]{%
+  \par\vspace{0.8em}\noindent{\heiti\bfseries 关键词：}#1
+}
+
+\newcommand{\CumcmAINotUsed}{%
+  \section*{AI工具使用声明}
+  本参赛队在竞赛过程中未使用任何AI工具。
+}
+
+\newcommand{\CumcmAIUsed}[1]{%
+  \section*{AI工具使用声明}
+  本参赛队在竞赛过程中使用了AI工具，主要用于#1，详细使用情况见支撑材料。
+}
+
+\lstdefinestyle{cumcmcode}{
+  basicstyle=\ttfamily\small,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=8pt,
+  frame=single,
+  rulecolor=\color{black!25},
+  backgroundcolor=\color{cumcmgray},
+  keywordstyle=\color{cumcmblue}\bfseries,
+  commentstyle=\color{codegreen},
+  stringstyle=\color{orange!70!black},
+  breaklines=true,
+  breakatwhitespace=false,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  literate=
+    {α}{{$\alpha$}}1 {β}{{$\beta$}}1 {ε}{{$\varepsilon$}}1
+    {λ}{{$\lambda$}}1 {ρ}{{$\rho$}}1 {τ}{{$\tau$}}1
+    {Δ}{{$\Delta$}}1 {Σ}{{$\Sigma$}}1
+    {≤}{{$\leq$}}1 {≥}{{$\geq$}}1 {≠}{{$\neq$}}1
+    {⇒}{{$\Rightarrow$}}1 {↔}{{$\leftrightarrow$}}1
+    {←}{{$\leftarrow$}}1 {→}{{$\rightarrow$}}1 {∅}{{$\varnothing$}}1
+    {−}{{$-$}}1 {×}{{$\times$}}1 {±}{{$\pm$}}1
+    {⁰}{{$^{0}$}}1 {₊}{{$_+$}}1
+}
+\lstset{style=cumcmcode}
+
+\sisetup{detect-all,group-minimum-digits=4}
+
+\endinput
